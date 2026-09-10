@@ -43,6 +43,10 @@ The app is framed around friendship, not dating: you meet horses, become friends
 
 Two user-created horses can also match each other if they both swipe right, so you can open two browsers and play both sides.
 
+## Real photos
+
+The horses ship as drawings until you add photographs. Drop one file per horse into `public/photos/` named by id (`h1.jpg` for Biscuit through `h16.jpg` for Starlight), commit them, and restart. Every card, avatar and profile switches to the photo, and an optional `credits.json` credits the photographer in the horse's profile. See `public/photos/README.md` for the id-to-horse list and formats. The hosted single-file build downsizes each photo to 720px and embeds it.
+
 ## API
 
 All responses are JSON.
@@ -81,8 +85,9 @@ server/
   ai.js      Claude persona replies and reply suggestions (optional)
   suggest.js rule-based reply suggestions and scripted horse answers
   horses.js  seed profiles (type, voice, skill), canned chat replies and farewells
+  photos.js  finds real photos in public/photos and their credits
 public/
   index.html, styles.css, app.js   the frontend
 test/
-  store.test.js, api.test.js, ai.test.js, suggest.test.js, horses.test.js
+  store.test.js, api.test.js, ai.test.js, suggest.test.js, horses.test.js, photos.test.js
 ```

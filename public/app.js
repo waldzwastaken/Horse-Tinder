@@ -80,7 +80,16 @@ function hasBlaze(horse) {
 }
 
 function avatar(horse, cls = 'avatar') {
+  if (horse.photo) return `<div class="${cls} has-photo"><img src="${esc(horse.photo)}" alt="${esc(horse.name)}" loading="lazy"></div>`;
   return `<div class="${cls}" style="background:linear-gradient(135deg,${shade(horse.coat, 90)},${shade(horse.coat, 40)})">${horseSvg(horse.coat, horse.mane, { blaze: hasBlaze(horse) })}</div>`;
+}
+
+function creditHtml(horse) {
+  const c = horse.photoCredit;
+  if (!horse.photo || !c) return '';
+  const who = c.author ? `Photo: ${esc(c.author)}` : 'Photo';
+  const lic = c.license ? ` · ${esc(c.license)}` : '';
+  return c.source ? `<a class="credit" href="${esc(c.source)}" target="_blank" rel="noopener">${who}${lic}</a>` : `<span class="credit">${who}${lic}</span>`;
 }
 
 function timeAgo(ts) {
@@ -318,13 +327,13 @@ async function renderSwipe() {
 function cardHtml(h) {
   const mine = new Set((state.me.interests || []).map((s) => s.toLowerCase()));
   return `<article class="card" data-id="${h.id}" tabindex="0" aria-label="${esc(h.name)}, ${h.age}">
-    <div class="card-art" style="background:linear-gradient(160deg,${shade(h.coat, 100)},${shade(h.coat, 30)})">
+    <div class="card-art ${h.photo ? 'has-photo' : ''}" style="background:linear-gradient(160deg,${shade(h.coat, 100)},${shade(h.coat, 30)})">
       <span class="compat">🍀 <b>${h.compatibility}%</b> friend match</span>
       <span class="dist">📍 ${h.distance} mi</span>
       <div class="stamp stamp-like">FRIEND</div>
       <div class="stamp stamp-nope">NOPE</div>
       <div class="stamp stamp-super">SUPER NEIGH</div>
-      ${horseSvg(h.coat, h.mane, { blaze: hasBlaze(h) })}
+      ${h.photo ? `<img class="card-photo" src="${esc(h.photo)}" alt="${esc(h.name)}, a ${esc(h.breed)}" draggable="false">` : horseSvg(h.coat, h.mane, { blaze: hasBlaze(h) })}
     </div>
     <div class="card-body">
       <div class="card-title"><h2>${esc(h.name)}</h2><span class="age">${h.age}</span>${h.type ? `<span class="type" title="${esc(h.typeName || '')}">${esc(h.type)}</span>` : ''}<span class="sex">${esc(h.sex)}</span></div>
@@ -462,6 +471,7 @@ function showDetails(h) {
   const mine = new Set((state.me.interests || []).map((s) => s.toLowerCase()));
   openModal(`
     <div class="pair">${avatar(h)}</div>
+    ${creditHtml(h)}
     <div class="detail">
       <h3>${esc(h.name)}, ${h.age}</h3>
       ${h.type ? `<div><span class="k">Personality</span><div><span class="type">${esc(h.type)}</span> ${esc(h.typeName || '')}${h.voice ? ` · ${esc(h.voice)}` : ''}</div></div>` : ''}

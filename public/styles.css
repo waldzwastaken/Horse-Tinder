@@ -222,6 +222,14 @@ p { margin: 0; }
   overflow: hidden;
 }
 .card-art svg { height: 92%; width: auto; display: block; filter: drop-shadow(0 10px 18px rgba(0,0,0,.2)); }
+.card-art .card-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 30%; user-select: none; -webkit-user-drag: none; }
+.card-art.has-photo::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 38%; background: linear-gradient(to top, rgba(43,29,18,.45), transparent); pointer-events: none; }
+.card-art.has-photo .stamp { z-index: 2; }
+.card-art.has-photo .compat, .card-art.has-photo .dist { z-index: 2; }
+.avatar.has-photo, .mini-avatar.has-photo, .hero-art.has-photo { background: #ddd; }
+.has-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 25%; display: block; }
+.credit { display: block; font-size: 11px; color: var(--muted); margin: -6px 0 8px; text-decoration: none; }
+.credit:hover { color: var(--accent); text-decoration: underline; }
 .card-art .compat {
   position: absolute;
   top: 14px;

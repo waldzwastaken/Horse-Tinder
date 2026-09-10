@@ -128,6 +128,8 @@ export class Store {
     this.replier = opts.replier || null;
     // Optional async ({ horse, partner, history }) => string[]|null. Null falls back to rules.
     this.suggester = opts.suggester || null;
+    // Optional { [horseId]: { url, credit? } } of real photos for seed horses.
+    this.photos = opts.photos || {};
     this.state = {
       horses: [],
       swipes: [], // { fromId, toId, direction, at }
@@ -144,7 +146,13 @@ export class Store {
     // Seed profiles can gain fields between releases; refresh them on load so saved data picks them up.
     for (const fresh of seed) {
       const existing = this.state.horses.find((h) => h.id === fresh.id && h.seed);
-      if (existing) Object.assign(existing, fresh, { typeName: fresh.typeName || TYPE_NAMES[fresh.type] || null });
+      if (!existing) continue;
+      const photo = this.photos[fresh.id];
+      Object.assign(existing, fresh, {
+        typeName: fresh.typeName || TYPE_NAMES[fresh.type] || null,
+        photo: photo?.url || null,
+        photoCredit: photo?.credit || null,
+      });
     }
   }
 
