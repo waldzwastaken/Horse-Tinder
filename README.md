@@ -1,6 +1,6 @@
 # 🐴 Horse Tinder
 
-Swipe right on your next pasture partner. A dating app for horses, built with zero dependencies: Node's built-in HTTP server, an in-memory store, and a vanilla JavaScript frontend.
+Swipe right on your next pasture partner. A dating app for horses: Node's built-in HTTP server, an in-memory store, and a vanilla JavaScript frontend. The only dependency is the Anthropic SDK, and that is optional.
 
 ## Run it
 
@@ -9,10 +9,18 @@ npm start
 # 🐴 Horse Tinder is trotting at http://localhost:3000
 ```
 
-Requires Node 20 or newer. Nothing to install.
+Requires Node 20 or newer. Without an API key the horses reply with canned lines and nothing needs installing.
+
+To let the horses talk back for real:
+
+```bash
+npm install
+ANTHROPIC_API_KEY=sk-ant-... npm start
+```
 
 - `PORT=8080 npm start` to change the port.
 - Data is saved to `data/db.json` so swipes and matches survive restarts. Set `DATA_FILE=` (empty) to keep everything in memory, or point it somewhere else.
+- `HORSE_AI_MODEL` overrides the model used for replies (default `claude-opus-5`).
 - `npm run dev` restarts the server when files change.
 
 ## What it does
@@ -21,6 +29,9 @@ Requires Node 20 or newer. Nothing to install.
 - **Swipe.** Drag cards left or right, flick up for a Super Neigh, or use the buttons. Arrow keys work too, plus `Z` to rewind and `I` for details.
 - **Match.** Each card shows a compatibility score based on shared interests, gait and distance. Seed horses like you back deterministically when compatibility is high enough; a Super Neigh always lands.
 - **Chat.** Matched horses reply to your messages. Unread badges, read receipts, quick replies, and an unmatch button for when it just isn't working out.
+- **AI replies.** With an API key set, every seed horse answers in character through Claude, using its profile and yours as the persona. Replies are one or two sentences, and if the API is unavailable or declines, the horse falls back to a canned line so the chat never stalls.
+- **Stable reputation.** A score from 0 to 100 shown on your profile. Sending messages and holding real conversations (four or more messages to one horse) raise it. Being ghosted lowers it. The score shifts how likely horses are to like you back by up to ten points either way.
+- **Ghosting has consequences.** If a horse is waiting on your reply and you keep swiping (six swipes), or you never say hello after matching (twelve swipes), it sends a sad farewell and the match ends. Ended matches sit in a "Walked away" section and can be read but not replied to.
 - **Profile.** Edit your horse and see your stats.
 
 Two user-created horses can also match each other if they both swipe right, so you can open two browsers and play both sides.
@@ -41,7 +52,7 @@ All responses are JSON.
 | `GET` | `/api/horses/:id/matches` | Matches with the other horse, last message and unread count |
 | `GET` | `/api/horses/:id/stats` | Swiped, liked, matches, remaining |
 | `GET` | `/api/matches/:id/messages?as=:horseId` | Messages; passing `as` marks them read |
-| `POST` | `/api/matches/:id/messages` | Body `{ fromId, text }`. Returns `{ message, replies }` |
+| `POST` | `/api/matches/:id/messages` | Body `{ fromId, text }`. Returns `{ message, replies }`; each reply carries `source: "ai"` or `"canned"` |
 | `DELETE` | `/api/matches/:id?as=:horseId` | Unmatch |
 
 ## Tests
@@ -50,7 +61,7 @@ All responses are JSON.
 npm test
 ```
 
-Covers the matching logic, validation, persistence, and the HTTP API end to end.
+Covers the matching logic, reputation and ghosting rules, the AI replier (with a fake client, no key needed), validation, persistence, and the HTTP API end to end.
 
 ## Layout
 
@@ -58,10 +69,11 @@ Covers the matching logic, validation, persistence, and the HTTP API end to end.
 server/
   index.js   entry point (reads PORT and DATA_FILE)
   app.js     HTTP router and static file serving
-  store.js   horses, swipes, matches, messages, compatibility
-  horses.js  seed profiles and canned chat replies
+  store.js   horses, swipes, matches, messages, compatibility, reputation
+  ai.js      Claude persona replies (optional)
+  horses.js  seed profiles, canned chat replies and farewells
 public/
   index.html, styles.css, app.js   the frontend
 test/
-  store.test.js, api.test.js
+  store.test.js, api.test.js, ai.test.js
 ```

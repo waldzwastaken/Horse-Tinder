@@ -1,10 +1,15 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { SEED_HORSES, HORSE_REPLIES } from './horses.js';
+import { SEED_HORSES, HORSE_REPLIES, HORSE_FAREWELLS } from './horses.js';
 
 const VALID_SEX = ['Mare', 'Stallion', 'Gelding'];
 const VALID_GAIT = ['Walk', 'Trot', 'Canter', 'Lope', 'Gallop'];
 const DIRECTIONS = ['like', 'nope', 'super'];
+// A seed horse walks away after this many of your swipes without a reply from you...
+export const GHOST_AFTER_UNANSWERED = 6;
+// ...or this many swipes after matching without you ever saying hello.
+export const GHOST_AFTER_SILENT = 12;
+export const MATCH_THRESHOLD = 75;
 
 export class ValidationError extends Error {
   constructor(message) {
@@ -49,12 +54,27 @@ export function compatibility(a, b) {
 
 /**
  * Whether horse `b` would swipe right on horse `a`. Deterministic for a given pair,
- * so the outcome does not change between page loads.
+ * so the outcome does not change between page loads. `bonus` comes from `a`'s
+ * stable reputation and can tip a borderline pair either way.
  */
-export function likesBack(a, b) {
+export function likesBack(a, b, bonus = 0) {
   const score = compatibility(a, b);
   const jitter = hashString(`${a.id}::${b.id}`) % 40; // 0..39
-  return score + jitter >= 75;
+  return score + jitter + bonus >= MATCH_THRESHOLD;
+}
+
+/** Human label for a reputation score. */
+export function reputationLabel(score) {
+  if (score >= 80) return 'Barn favourite';
+  if (score >= 60) return 'Good company';
+  if (score >= 40) return 'Solid citizen';
+  if (score >= 20) return 'Bit of a ghost';
+  return 'Pasture pariah';
+}
+
+/** Like-back bonus derived from reputation: -10 at 0, 0 at 50, +10 at 100. */
+export function reputationBonus(score) {
+  return Math.round((score - 50) / 5);
 }
 
 function clean(str, max) {
@@ -103,6 +123,8 @@ export class Store {
   constructor(opts = {}) {
     this.file = opts.file || null;
     this.now = opts.now || (() => Date.now());
+    // Optional async ({ horse, partner, history }) => string|null. Null falls back to canned lines.
+    this.replier = opts.replier || null;
     this.state = {
       horses: [],
       swipes: [], // { fromId, toId, direction, at }
@@ -182,7 +204,7 @@ export class Store {
     let likedBack = false;
     if (direction !== 'nope') {
       if (them.seed) {
-        likedBack = direction === 'super' || likesBack(me, them);
+        likedBack = direction === 'super' || likesBack(me, them, reputationBonus(this.reputation(fromId).score));
       } else {
         likedBack = this.state.swipes.some(
           (s) => s.fromId === toId && s.toId === fromId && s.direction !== 'nope',
@@ -190,17 +212,81 @@ export class Store {
       }
       if (likedBack) match = this.ensureMatch(fromId, toId);
     }
+    const ghosted = this.checkGhosting(fromId);
     this.persist();
-    return { match, likedBack };
+    return { match, likedBack, ghosted };
   }
 
   ensureMatch(a, b) {
     let match = this.findMatch(a, b);
     if (!match) {
-      match = { id: this.nextId('m'), horseIds: [a, b], at: this.now() };
+      match = { id: this.nextId('m'), horseIds: [a, b], at: this.now(), status: 'active' };
       this.state.matches.push(match);
     }
     return match;
+  }
+
+  isActive(match) {
+    return (match.status || 'active') === 'active';
+  }
+
+  /**
+   * Seed horses lose patience. If you keep swiping while one of them waits on a
+   * reply (or a first hello), they send a farewell and the match ends.
+   * Returns the horses that walked away this time.
+   */
+  checkGhosting(id) {
+    const ghosted = [];
+    for (const match of this.state.matches) {
+      if (!match.horseIds.includes(id) || !this.isActive(match)) continue;
+      const otherId = match.horseIds.find((x) => x !== id);
+      const other = this.getHorse(otherId);
+      if (!other.seed) continue;
+      const msgs = this.state.messages.filter((m) => m.matchId === match.id);
+      const last = msgs[msgs.length - 1];
+      let since;
+      let limit;
+      if (!last) {
+        since = match.at;
+        limit = GHOST_AFTER_SILENT;
+      } else if (last.fromId === otherId) {
+        since = last.at;
+        limit = GHOST_AFTER_UNANSWERED;
+      } else {
+        continue;
+      }
+      const swipesSince = this.state.swipes.filter((s) => s.fromId === id && s.at > since).length;
+      if (swipesSince < limit) continue;
+      const line = HORSE_FAREWELLS[hashString(`${match.id}:bye`) % HORSE_FAREWELLS.length];
+      this.state.messages.push({
+        id: this.nextId('msg'),
+        matchId: match.id,
+        fromId: otherId,
+        text: line,
+        at: this.now(),
+        read: false,
+      });
+      match.status = 'ended';
+      match.endedReason = 'ghosted';
+      match.endedAt = this.now();
+      ghosted.push(other);
+    }
+    return ghosted;
+  }
+
+  /**
+   * Stable reputation, 0 to 100. Conversations raise it, ghosting lowers it,
+   * and it feeds back into how likely other horses are to like you back.
+   */
+  reputation(id) {
+    const mine = this.state.matches.filter((m) => m.horseIds.includes(id));
+    const sent = this.state.messages.filter((m) => m.fromId === id).length;
+    const deep = mine.filter(
+      (m) => this.state.messages.filter((x) => x.matchId === m.id && x.fromId === id).length >= 4,
+    ).length;
+    const ghosted = mine.filter((m) => m.status === 'ended' && m.endedReason === 'ghosted').length;
+    const score = Math.max(0, Math.min(100, 50 + Math.min(20, sent * 2) + Math.min(18, deep * 6) - ghosted * 12));
+    return { score, label: reputationLabel(score), sent, deep, ghosted, bonus: reputationBonus(score) };
   }
 
   findMatch(a, b) {
@@ -224,12 +310,19 @@ export class Store {
         return {
           id: m.id,
           at: m.at,
+          status: m.status || 'active',
+          endedReason: m.endedReason || null,
+          endedAt: m.endedAt || null,
           horse: this.getHorse(otherId),
           lastMessage: msgs.length ? msgs[msgs.length - 1] : null,
           unread: msgs.filter((x) => x.fromId !== id && !x.read).length,
         };
       })
-      .sort((a, b) => (b.lastMessage?.at ?? b.at) - (a.lastMessage?.at ?? a.at));
+      .sort(
+        (a, b) =>
+          (a.status === 'active' ? 0 : 1) - (b.status === 'active' ? 0 : 1)
+          || (b.lastMessage?.at ?? b.at) - (a.lastMessage?.at ?? a.at),
+      );
   }
 
   unmatch(matchId, requesterId) {
@@ -257,28 +350,49 @@ export class Store {
     return list;
   }
 
-  /** Send a message. If the other horse is a seed horse it replies automatically. */
-  sendMessage(matchId, fromId, text) {
+  /**
+   * Send a message. If the other horse is a seed horse it replies: through the
+   * configured AI replier when one is set, otherwise with a canned line.
+   */
+  async sendMessage(matchId, fromId, text) {
     const match = this.getMatch(matchId);
     if (!match.horseIds.includes(fromId)) throw new ValidationError('Not your match');
+    if (!this.isActive(match)) throw new ValidationError('This horse has moved on');
     const body = clean(text, 500);
     if (!body) throw new ValidationError('Message cannot be empty');
     const msg = { id: this.nextId('msg'), matchId, fromId, text: body, at: this.now(), read: false };
     this.state.messages.push(msg);
+    this.persist();
 
     const otherId = match.horseIds.find((x) => x !== fromId);
     const other = this.getHorse(otherId);
     const replies = [];
     if (other.seed) {
-      const count = this.state.messages.filter((m) => m.matchId === matchId && m.fromId === otherId).length;
-      const idx = (hashString(`${matchId}:${count}`) + count) % HORSE_REPLIES.length;
+      const me = this.getHorse(fromId);
+      const history = this.state.messages.filter((m) => m.matchId === matchId);
+      let replyText = null;
+      let source = 'canned';
+      if (this.replier) {
+        try {
+          replyText = await this.replier({ horse: other, partner: me, history });
+          if (replyText) source = 'ai';
+        } catch {
+          replyText = null;
+        }
+      }
+      if (!replyText) {
+        const count = history.filter((m) => m.fromId === otherId).length;
+        const idx = (hashString(`${matchId}:${count}`) + count) % HORSE_REPLIES.length;
+        replyText = HORSE_REPLIES[idx];
+      }
       const reply = {
         id: this.nextId('msg'),
         matchId,
         fromId: otherId,
-        text: HORSE_REPLIES[idx],
-        at: this.now() + 1,
+        text: replyText,
+        at: this.now(),
         read: false,
+        source,
       };
       this.state.messages.push(reply);
       replies.push(reply);
@@ -292,8 +406,10 @@ export class Store {
     return {
       swiped: swipes.length,
       liked: swipes.filter((s) => s.direction !== 'nope').length,
-      matches: this.state.matches.filter((m) => m.horseIds.includes(id)).length,
+      matches: this.state.matches.filter((m) => m.horseIds.includes(id) && this.isActive(m)).length,
       remaining: this.deck(id).length,
+      reputation: this.reputation(id),
+      aiReplies: Boolean(this.replier),
     };
   }
 }

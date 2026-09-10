@@ -95,6 +95,7 @@ test('full swipe, match and chat flow over HTTP', async () => {
   const swipe = await call('POST', `/api/horses/${me.id}/swipe`, { targetId: target.id, direction: 'super' });
   assert.equal(swipe.status, 200);
   assert.ok(swipe.data.match, 'super like should match');
+  assert.deepEqual(swipe.data.ghosted, []);
   const matchId = swipe.data.match.id;
 
   const dup = await call('POST', `/api/horses/${me.id}/swipe`, { targetId: target.id, direction: 'like' });
@@ -104,6 +105,7 @@ test('full swipe, match and chat flow over HTTP', async () => {
   assert.equal(matches.data.length, 1);
   assert.equal(matches.data[0].horse.id, target.id);
   assert.equal(matches.data[0].lastMessage, null);
+  assert.equal(matches.data[0].status, 'active');
 
   const sent = await call('POST', `/api/matches/${matchId}/messages`, { fromId: me.id, text: 'Neigh!' });
   assert.equal(sent.status, 201);
@@ -121,6 +123,8 @@ test('full swipe, match and chat flow over HTTP', async () => {
   const stats = await call('GET', `/api/horses/${me.id}/stats`);
   assert.equal(stats.data.matches, 1);
   assert.equal(stats.data.swiped, 1);
+  assert.equal(stats.data.reputation.score, 52);
+  assert.equal(stats.data.aiReplies, false);
 
   const patched = await call('PATCH', `/api/horses/${me.id}`, { name: 'Tester II' });
   assert.equal(patched.status, 200);

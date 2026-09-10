@@ -274,3 +274,13 @@ export const HORSE_REPLIES = [
   'What is your stance on being ridden? Asking for a friend.',
   'I found the good grass. I will show you where. Nobody else knows.',
 ];
+
+// What a horse says when it gives up waiting for you to write back.
+export const HORSE_FAREWELLS = [
+  'I waited by the fence every evening. I think I understand now. Take care of yourself.',
+  'Guess the good grass was not enough to keep you around. I hope your pasture is greener.',
+  'I told the whole barn about you. Now I have to tell them this. Goodbye.',
+  'Left on read. Even the farrier calls back. I am moving on.',
+  'It is okay. Some horses are just passing through. I will remember your mane.',
+  'I saved you a carrot for a long time. I ate it today. Be well.',
+];

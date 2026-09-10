@@ -151,6 +151,7 @@ function renderTopbar() {
 async function setTab(tab) {
   state.tab = tab;
   state.chatMatch = null;
+  view.onclick = null;
   for (const b of tabs.querySelectorAll('.tab')) b.classList.toggle('active', b.dataset.tab === tab);
   renderTopbar();
   if (tab === 'swipe') await renderSwipe();
@@ -427,10 +428,15 @@ async function swipeTop(direction) {
     setTimeout(() => {
       paintDeck();
       state.busy = false;
+      if (result.ghosted?.length) {
+        refreshMatches();
+        const names = result.ghosted.map((h) => h.name).join(' and ');
+        toast(`${names} got tired of waiting and walked away. 💔`, 3500);
+      }
       if (result.match) {
         refreshMatches();
         showMatch(horse, result.match);
-      } else if (direction === 'super') {
+      } else if (direction === 'super' && !result.ghosted?.length) {
         toast(`${horse.name} felt that Super Neigh. 🌟`);
       }
     }, 280);
@@ -508,24 +514,29 @@ async function renderMatches() {
     $('#go-swipe').addEventListener('click', () => setTab('swipe'));
     return;
   }
-  const fresh = state.matches.filter((m) => !m.lastMessage);
-  const convos = state.matches.filter((m) => m.lastMessage);
+  const active = state.matches.filter((m) => m.status === 'active');
+  const ended = state.matches.filter((m) => m.status !== 'active');
+  const fresh = active.filter((m) => !m.lastMessage);
+  const convos = active.filter((m) => m.lastMessage);
+  const row = (m) => `
+      <button class="match-row ${m.status !== 'active' ? 'ended' : ''}" data-id="${m.id}">
+        ${avatar(m.horse)}
+        <div class="info"><strong>${esc(m.horse.name)}</strong><div class="last ${m.unread ? 'unread' : ''}">${m.lastMessage.fromId === state.me.id ? 'You: ' : ''}${esc(m.lastMessage.text)}</div></div>
+        ${m.unread ? '<span class="dot"></span>' : ''}
+      </button>`;
   view.innerHTML = `
     ${fresh.length ? `<div class="section-title">New matches</div><div class="new-matches">${fresh.map((m) => `
       <button class="new-match" data-id="${m.id}">${avatar(m.horse)}<span>${esc(m.horse.name)}</span></button>`).join('')}</div>` : ''}
     <div class="section-title">Messages</div>
-    <div class="list">${convos.length ? convos.map((m) => `
-      <button class="match-row" data-id="${m.id}">
-        ${avatar(m.horse)}
-        <div class="info"><strong>${esc(m.horse.name)}</strong><div class="last ${m.unread ? 'unread' : ''}">${m.lastMessage.fromId === state.me.id ? 'You: ' : ''}${esc(m.lastMessage.text)}</div></div>
-        ${m.unread ? '<span class="dot"></span>' : ''}
-      </button>`).join('') : `<p class="or" style="padding:16px">Say hi to a new match to start a conversation.</p>`}</div>`;
-  view.addEventListener('click', (e) => {
+    <div class="list">${convos.length ? convos.map(row).join('') : `<p class="or" style="padding:16px">Say hi to a new match to start a conversation. Horses do not wait forever.</p>`}
+    ${ended.length ? `<div class="section-title muted">Walked away</div>${ended.map(row).join('')}` : ''}</div>`;
+  // Assigned, not added: renders happen often and stacked listeners would open a chat twice.
+  view.onclick = (e) => {
     const b = e.target.closest('[data-id]');
     if (!b) return;
     const m = state.matches.find((x) => x.id === b.dataset.id);
     if (m) openChat(m);
-  });
+  };
 }
 
 // ---------- chat ----------
@@ -536,20 +547,24 @@ function msgHtml(m) {
 
 async function openChat(match) {
   state.chatMatch = match;
+  view.onclick = null;
   const h = match.horse;
+  const ended = match.status !== 'active';
   view.innerHTML = `<div class="chat">
     <div class="chat-head">
       <button class="icon-btn" id="chat-back" aria-label="Back">←</button>
       ${avatar(h)}
-      <div class="who"><strong>${esc(h.name)}</strong><span class="sub">${esc(h.breed)} · ${esc(h.stable)} · matched ${timeAgo(match.at)}</span></div>
-      <button class="icon-btn" id="chat-unmatch" title="Unmatch" aria-label="Unmatch">🗑️</button>
+      <div class="who"><strong>${esc(h.name)}</strong><span class="sub">${ended ? 'walked away' : `${esc(h.breed)} · ${esc(h.stable)} · matched ${timeAgo(match.at)}`}</span></div>
+      <button class="icon-btn" id="chat-unmatch" title="${ended ? 'Delete conversation' : 'Unmatch'}" aria-label="${ended ? 'Delete conversation' : 'Unmatch'}">🗑️</button>
     </div>
     <div class="messages" id="messages"><div class="msg-sys">You matched with ${esc(h.name)}. Say something nice.</div></div>
+    ${ended ? `<div class="msg-sys ended-note">${esc(h.name)} has moved on. You can still read the conversation.</div>` : `
     <div class="quick-replies" id="quick">${QUICK_REPLIES.map((q) => `<button type="button">${esc(q)}</button>`).join('')}</div>
-    <form class="composer" id="composer"><input id="chat-input" placeholder="Message ${esc(h.name)}" maxlength="500" autocomplete="off"><button type="submit">Send</button></form>
+    <form class="composer" id="composer"><input id="chat-input" placeholder="Message ${esc(h.name)}" maxlength="500" autocomplete="off"><button type="submit">Send</button></form>`}
   </div>`;
   const list = $('#messages');
   const input = $('#chat-input');
+  const endedNote = $('.ended-note', view);
   $('#chat-back').addEventListener('click', () => setTab('matches'));
   $('#chat-unmatch').addEventListener('click', () => {
     const modal = openModal(`<h2 style="font-size:24px">Unmatch ${esc(h.name)}?</h2><p>This deletes the conversation. ${esc(h.name)} will not be told, but will probably sense it.</p>
@@ -564,50 +579,64 @@ async function openChat(match) {
       } catch (err) { toast(err.message); }
     });
   });
-  $('#quick').addEventListener('click', (e) => {
+  $('#quick')?.addEventListener('click', (e) => {
     if (e.target.tagName === 'BUTTON') { input.value = e.target.textContent; input.focus(); }
   });
 
   try {
     const msgs = await api(`/api/matches/${match.id}/messages?as=${state.me.id}`);
     list.insertAdjacentHTML('beforeend', msgs.map(msgHtml).join(''));
+    if (endedNote) list.appendChild(endedNote);
     list.scrollTop = list.scrollHeight;
     refreshMatches();
   } catch (err) { toast(err.message); }
 
-  $('#composer').addEventListener('submit', async (e) => {
+  let sending = false;
+  $('#composer')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const text = input.value.trim();
-    if (!text) return;
+    if (!text || sending) return;
+    sending = true;
     input.value = '';
+    // Show the message and a typing indicator right away: an AI reply can take a few seconds.
+    const pending = document.createElement('div');
+    pending.className = 'msg me pending';
+    pending.textContent = text;
+    list.appendChild(pending);
+    const typing = document.createElement('div');
+    typing.className = 'typing';
+    typing.innerHTML = '<i></i><i></i><i></i>';
+    list.appendChild(typing);
+    list.scrollTop = list.scrollHeight;
+    const startedAt = Date.now();
     try {
-      const { message, replies } = await api(`/api/matches/${match.id}/messages`, { method: 'POST', body: { fromId: state.me.id, text } });
-      list.insertAdjacentHTML('beforeend', msgHtml(message));
-      list.scrollTop = list.scrollHeight;
-      if (replies.length) {
-        const typing = document.createElement('div');
-        typing.className = 'typing';
-        typing.innerHTML = '<i></i><i></i><i></i>';
-        list.appendChild(typing);
+      const { replies } = await api(`/api/matches/${match.id}/messages`, { method: 'POST', body: { fromId: state.me.id, text } });
+      pending.classList.remove('pending');
+      const wait = Math.max(0, 900 - (Date.now() - startedAt));
+      setTimeout(() => {
+        typing.remove();
+        if (state.chatMatch?.id !== match.id) return;
+        list.insertAdjacentHTML('beforeend', replies.map(msgHtml).join(''));
         list.scrollTop = list.scrollHeight;
-        setTimeout(() => {
-          typing.remove();
-          if (state.chatMatch?.id !== match.id) return;
-          list.insertAdjacentHTML('beforeend', replies.map(msgHtml).join(''));
-          list.scrollTop = list.scrollHeight;
-          api(`/api/matches/${match.id}/messages?as=${state.me.id}`).catch(() => {});
-        }, 900 + Math.random() * 900);
-      }
-    } catch (err) { toast(err.message); }
+        api(`/api/matches/${match.id}/messages?as=${state.me.id}`).catch(() => {});
+      }, wait);
+    } catch (err) {
+      pending.remove();
+      typing.remove();
+      toast(err.message);
+      if (/moved on/i.test(err.message)) { await refreshMatches(); const m = state.matches.find((x) => x.id === match.id); if (m) openChat(m); }
+    } finally {
+      sending = false;
+    }
   });
-  input.focus();
+  input?.focus();
 }
 
 // ---------- profile ----------
 
 async function renderProfile() {
   const me = state.me;
-  let stats = { swiped: 0, liked: 0, matches: 0, remaining: 0 };
+  let stats = { swiped: 0, liked: 0, matches: 0, remaining: 0, reputation: null };
   try { stats = await api(`/api/horses/${me.id}/stats`); } catch { /* ignore */ }
   view.innerHTML = `<div class="profile">
     <div class="profile-hero">${avatar(me)}<div><h2>${esc(me.name)}, ${me.age}</h2><div class="sub">${esc(me.breed)} · ${esc(me.sex)} · ${me.height} hh</div><div class="sub">${esc(me.stable)}</div></div></div>
@@ -617,6 +646,14 @@ async function renderProfile() {
       <div class="stat"><b>${stats.matches}</b><span>Matches</span></div>
       <div class="stat"><b>${stats.remaining}</b><span>Left</span></div>
     </div>
+    ${stats.reputation ? `<div class="rep">
+      <div class="rep-score"><b>${stats.reputation.score}</b><span>Stable reputation</span></div>
+      <div class="rep-body">
+        <strong>${esc(stats.reputation.label)}</strong>
+        <p>Long conversations raise it. Leaving a horse on read lowers it. ${stats.reputation.bonus > 0 ? `Right now horses are <b>${stats.reputation.bonus} points</b> more likely to like you back.` : stats.reputation.bonus < 0 ? `Right now horses are <b>${-stats.reputation.bonus} points</b> less likely to like you back.` : 'Right now it is not tipping the scales either way.'}</p>
+        <p class="rep-meta">${stats.reputation.sent} sent · ${stats.reputation.deep} real conversation${stats.reputation.deep === 1 ? '' : 's'} · ${stats.reputation.ghosted} ghosted</p>
+      </div>
+    </div>` : ''}
     <p style="color:var(--ink-2);font-size:14px">${esc(me.bio)}</p>
     <div class="chips">${(me.interests || []).map((i) => `<span class="chip">${esc(i)}</span>`).join('')}</div>
     <details class="panel"><summary>Edit profile</summary>

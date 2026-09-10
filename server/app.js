@@ -75,7 +75,7 @@ function buildRoutes(store) {
     [
       'POST',
       '/api/matches/:id/messages',
-      ({ params, body }) => [201, store.sendMessage(params.id, String(body.fromId ?? ''), body.text)],
+      async ({ params, body }) => [201, await store.sendMessage(params.id, String(body.fromId ?? ''), body.text)],
     ],
     [
       'DELETE',
