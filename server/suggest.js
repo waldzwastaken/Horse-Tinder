@@ -73,3 +73,51 @@ export function suggestReplies(horse, partner, history = []) {
   const generics = [...GENERIC.slice(offset), ...GENERIC.slice(0, offset)];
   return unique([...picks, ...generics], 3);
 }
+
+/**
+ * Context-aware canned reply from `horse` to the latest message in `history`.
+ * Used when no AI replier is configured or it fails, so the horse still
+ * answers what was actually said. Returns null when nothing matches.
+ */
+const ANSWER_RULES = [
+  [/apple|carrot|peppermint|sugar|treat|snack|watermelon|cube/, (h) => {
+    const likes = (h.interests || []).map((s) => s.toLowerCase());
+    if (likes.some((s) => s.includes('carrot'))) return 'Carrots. Always carrots. I will fight you on this.';
+    if (likes.some((s) => s.includes('apple'))) return 'Apples, obviously. Crunchy, sweet, perfect. Next question.';
+    if (likes.some((s) => s.includes('peppermint'))) return 'Peppermints. I am a horse of refinement.';
+    if (likes.some((s) => s.includes('sugar'))) return 'Sugar cubes, and I am not ashamed.';
+    return 'Honestly? Whatever you are holding.';
+  }],
+  [/\bhay\b|alfalfa|oats|grass|graz|feed/, (h) => ((h.interests || []).some((s) => /oat/i.test(s))
+    ? 'Oats. A bucket of oats and I am yours.'
+    : 'Second cutting alfalfa or I walk. I have standards.')],
+  [/\bmud\b|roll|dirt|dust|puddle/, () => 'I just rolled in the mud and I feel amazing. Join me next time?'],
+  [/trough|water|drink|thirsty/, () => 'Trough at sunset. I will save you the shady end.'],
+  [/race|gallop|\brun\b|fast|zoom|far fence/, (h) => {
+    if (h.gait === 'Gallop') return 'You are on. I do not lose. Far fence, go!';
+    if (h.gait === 'Walk') return 'I do not race. I arrive. Stylishly, eventually.';
+    return 'You are on, but I want a head start and a snack after.';
+  }],
+  [/farrier|hoof|hooves|shoe/, () => 'Do not say that word. My appointment is Tuesday and I am not okay.'],
+  [/plastic|\bbag\b|scary|spook|afraid/, () => 'I saw a plastic bag last week and I am still recovering. Hold my mane.'],
+  [/\bmane\b|\bcoat\b|shiny|pretty|handsome|beautiful|lovely|gorgeous|cute/, (h, p) => `Stop, you are making me blush under all this hair. Yours is not bad either, ${p.name}.`],
+  [/where|stable|barn|live|from|home/, (h) => `${h.stable}. Decent hay, questionable neighbours, ${h.distance} miles from you.`],
+  [/ridden|rider|human|saddle|owner/, () => 'My human is fine. Brings carrots, talks too much, means well.'],
+  [/gait|trot|canter|lope|walk/, (h) => `${h.gait}, no question. Have you seen me ${h.gait.toLowerCase()}? People stop and stare.`],
+  [/how old|age|years/, (h) => `${h.age}. Which is the perfect age, everyone says so. Mostly me.`],
+  [/\b(hi|hello|hey|hay there|neigh|howdy|morning|evening)\b/, (h, p) => `Neigh! I was hoping you would write. Tell me about ${((p.interests || [])[0] || 'your pasture').toLowerCase()}.`],
+  [/date|meet|see you|hang out|come over/, (h) => `Yes. ${h.stable}, by the far gate, when the humans have gone in.`],
+  [/\b(do|are|will|would|can|could|have|did|is)\s+you\b.*\?/, () => 'Yes. Obviously yes. When do we start?'],
+  [/\?/, () => 'Good question. I would say yes, but ask me again after lunch.'],
+  [/love|like you|crush|miss you|heart/, (h, p) => `${p.name}, I have thought about you at every feeding today. That is a lot of feedings.`],
+];
+
+export function cannedReply(horse, partner, history = []) {
+  const last = [...history].reverse().find((m) => m.fromId !== horse.id);
+  if (!last) return null;
+  const text = last.text.toLowerCase();
+  for (const [pattern, answer] of ANSWER_RULES) {
+    if (pattern.test(text)) return answer(horse, partner);
+  }
+  return null;
+}

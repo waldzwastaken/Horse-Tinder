@@ -626,13 +626,17 @@ async function openChat(match) {
     suggestToken += 1;
     const startedAt = Date.now();
     try {
-      const { replies } = await api(`/api/matches/${match.id}/messages`, { method: 'POST', body: { fromId: state.me.id, text } });
+      const { replies, aiError } = await api(`/api/matches/${match.id}/messages`, { method: 'POST', body: { fromId: state.me.id, text } });
       pending.classList.remove('pending');
+      const fellBack = state.aiReady && replies.some((r) => r.source === 'canned');
       const wait = Math.max(0, 900 - (Date.now() - startedAt));
       setTimeout(() => {
         typing.remove();
         if (state.chatMatch?.id !== match.id) return;
         list.insertAdjacentHTML('beforeend', replies.map(msgHtml).join(''));
+        if (fellBack && !list.querySelector('.ai-note')) {
+          list.insertAdjacentHTML('beforeend', `<div class="msg-sys ai-note">${esc(h.name)} answered from memory. Claude ${aiError ? `said: ${esc(aiError)}` : 'gave no reply'}.</div>`);
+        }
         list.scrollTop = list.scrollHeight;
         api(`/api/matches/${match.id}/messages?as=${state.me.id}`).catch(() => {});
         loadSuggestions();

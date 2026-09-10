@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { suggestReplies } from '../server/suggest.js';
+import { suggestReplies, cannedReply } from '../server/suggest.js';
 import { buildSuggestionPrompt, parseSuggestions, createClaudeSuggester, SUGGESTION_SCHEMA } from '../server/ai.js';
 import { Store } from '../server/store.js';
 import { SEED_HORSES } from '../server/horses.js';
@@ -106,4 +106,33 @@ test('store serves AI suggestions, falls back to rules, and none once ended', as
   const fillers = Array.from({ length: 8 }, (_, i) => plain.createHorse({ name: `F${i}`, age: 5, sex: 'Mare' }));
   for (const f of fillers) plain.swipe(me2.id, f.id, 'nope');
   assert.deepEqual(await plain.suggestions(m2.id, me2.id), { suggestions: [], source: 'none' });
+});
+
+test('canned replies answer the question that was asked', () => {
+  const ask = (text, h = horse) => cannedReply(h, partner, [{ fromId: 'u1', text }]);
+  assert.match(ask('Be honest, Biscuit: apples or carrots?'), /Carrots/);
+  assert.match(ask('apples or carrots?', SEED_HORSES[2]), /Peppermints/, 'Daisy prefers peppermints');
+  assert.match(ask('Race you to the far fence?', SEED_HORSES[3]), /I do not lose/, 'Copper gallops');
+  assert.match(ask('Race you?', SEED_HORSES[5]), /I arrive/, 'Big Red walks');
+  assert.match(ask('Where do you live?'), /Willow Creek Stables/);
+  assert.match(ask('You have a lovely mane'), /Tester/);
+  assert.match(ask('hi'), /trail rides/);
+  assert.match(ask('Do you like hay?'), /alfalfa/, 'hay outranks the generic yes');
+  assert.match(ask('Would you come over?'), /Yes/);
+  assert.equal(ask('xyzzy'), null, 'no rule, no answer');
+  assert.equal(cannedReply(horse, partner, []), null);
+  // The horse's own last message is ignored; it answers the partner's.
+  assert.match(cannedReply(horse, partner, [{ fromId: 'u1', text: 'trough later?' }, { fromId: 'h1', text: 'mud!' }]), /Trough/);
+});
+
+test('store uses context-aware canned replies before the general pool', async () => {
+  let clock = 0;
+  const store = new Store({ now: () => (clock += 1) });
+  const me = store.createHorse({ name: 'Tester', age: 6, sex: 'Mare', interests: ['Apples'], gait: 'Trot' });
+  const { match } = store.swipe(me.id, 'h1', 'super');
+  const { replies } = await store.sendMessage(match.id, me.id, 'Be honest, Biscuit: apples or carrots?');
+  assert.match(replies[0].text, /Carrots/);
+  assert.equal(replies[0].source, 'canned');
+  const { replies: generic } = await store.sendMessage(match.id, me.id, 'xyzzy');
+  assert.ok(generic[0].text.length > 0);
 });

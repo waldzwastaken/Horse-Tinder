@@ -326,6 +326,7 @@ p { margin: 0; }
 .match-row.ended .avatar { filter: grayscale(1); }
 .section-title.muted { color: var(--muted); font-size: 15px; margin-top: 14px; }
 .ended-note { color: var(--red); }
+.ai-note { color: var(--muted); font-size: 11px; }
 .msg.pending { opacity: .6; }
 
 /* Chat */

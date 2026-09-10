@@ -29,7 +29,7 @@ ANTHROPIC_API_KEY=sk-ant-... npm start
 - **Swipe.** Drag cards left or right, flick up for a Super Neigh, or use the buttons. Arrow keys work too, plus `Z` to rewind and `I` for details.
 - **Match.** Each card shows a compatibility score based on shared interests, gait and distance. Seed horses like you back deterministically when compatibility is high enough; a Super Neigh always lands.
 - **Chat.** Matched horses reply to your messages. Unread badges, read receipts, quick replies, and an unmatch button for when it just isn't working out.
-- **AI replies.** With an API key set, every seed horse answers in character through Claude, using its profile and yours as the persona. Replies are one or two sentences, and if the API is unavailable or declines, the horse falls back to a canned line so the chat never stalls.
+- **AI replies.** With an API key set, every seed horse answers in character through Claude, using its profile and yours as the persona. Replies are one or two sentences. If the API is unavailable or declines, the horse falls back to a scripted answer that still responds to what you said (ask "apples or carrots?" and a carrot lover says carrots), and only then to a general line, so the chat never stalls or loses the thread.
 - **Suggested replies.** The pills above the message box are real candidate replies to the latest message, not fixed phrases. With an API key they are written by Claude in your horse's voice (one playful, one curious, one bold) as structured JSON. Without one, rules read the horse's last message and your shared interests: openers mention what you have in common, and a horse asking "apples or peppermints?" gets pills that answer it. Tap a pill to put it in the box, edit if you like, and send.
 - **Stable reputation.** A score from 0 to 100 shown on your profile. Sending messages and holding real conversations (four or more messages to one horse) raise it. Being ghosted lowers it. The score shifts how likely horses are to like you back by up to ten points either way.
 - **Ghosting has consequences.** If a horse is waiting on your reply and you keep swiping (six swipes), or you never say hello after matching (twelve swipes), it sends a sad farewell and the match ends. Ended matches sit in a "Walked away" section and can be read but not replied to.
@@ -73,7 +73,7 @@ server/
   app.js     HTTP router and static file serving
   store.js   horses, swipes, matches, messages, compatibility, reputation
   ai.js      Claude persona replies and reply suggestions (optional)
-  suggest.js rule-based reply suggestions
+  suggest.js rule-based reply suggestions and scripted horse answers
   horses.js  seed profiles, canned chat replies and farewells
 public/
   index.html, styles.css, app.js   the frontend

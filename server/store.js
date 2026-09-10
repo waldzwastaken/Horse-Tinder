@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { SEED_HORSES, HORSE_REPLIES, HORSE_FAREWELLS } from './horses.js';
-import { suggestReplies } from './suggest.js';
+import { suggestReplies, cannedReply } from './suggest.js';
 
 const VALID_SEX = ['Mare', 'Stallion', 'Gelding'];
 const VALID_GAIT = ['Walk', 'Trot', 'Canter', 'Lope', 'Gallop'];
@@ -382,6 +382,10 @@ export class Store {
         } catch {
           replyText = null;
         }
+      }
+      if (!replyText) {
+        // Answer what was said when a rule fits; otherwise a stable pick from the general lines.
+        replyText = cannedReply(other, me, history);
       }
       if (!replyText) {
         const count = history.filter((m) => m.fromId === otherId).length;
