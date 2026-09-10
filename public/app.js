@@ -601,7 +601,6 @@ async function openChat(match) {
     helpToggle.classList.toggle('on', helpMode);
     input.placeholder = helpMode ? `Ask ${h.name} for help with…` : `Message ${h.name}`;
     if (helpMode) toast(`${h.name} · ${h.skill.name}: ${h.skill.tagline}`, 2600);
-    input.focus();
   });
   const quick = $('#quick');
   quick?.addEventListener('click', (e) => {
@@ -675,7 +674,7 @@ async function openChat(match) {
       sending = false;
     }
   });
-  input?.focus();
+  // No automatic focus: on phones that would raise the keyboard as soon as the chat opens.
 }
 
 // ---------- profile ----------
