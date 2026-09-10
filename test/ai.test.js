@@ -32,9 +32,9 @@ test('turns map the horse to assistant and always end on a user turn', () => {
 
 test('cleanReply strips quotes and trims long output at a sentence', () => {
   assert.equal(cleanReply('"Neigh there."'), 'Neigh there.');
-  const long = `${'Hay is great. '.repeat(40)}Trailing fragment without end`;
+  const long = `${'Hay is great. '.repeat(60)}Trailing fragment without end`;
   const out = cleanReply(long);
-  assert.ok(out.length <= 400);
+  assert.ok(out.length <= 700);
   assert.ok(out.endsWith('.'));
 });
 

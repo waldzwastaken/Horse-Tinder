@@ -327,8 +327,9 @@ function cardHtml(h) {
       ${horseSvg(h.coat, h.mane, { blaze: hasBlaze(h) })}
     </div>
     <div class="card-body">
-      <div class="card-title"><h2>${esc(h.name)}</h2><span class="age">${h.age}</span><span class="sex">${esc(h.sex)}</span></div>
+      <div class="card-title"><h2>${esc(h.name)}</h2><span class="age">${h.age}</span>${h.type ? `<span class="type" title="${esc(h.typeName || '')}">${esc(h.type)}</span>` : ''}<span class="sex">${esc(h.sex)}</span></div>
       <div class="card-meta">${esc(h.breed)} · ${h.height} hh · ${esc(h.stable)}</div>
+      ${h.skill ? `<div class="card-skill"><b>${esc(h.typeName || 'Skill')}</b> · ${esc(h.skill.name)}: ${esc(h.skill.tagline.charAt(0).toLowerCase() + h.skill.tagline.slice(1))}</div>` : ''}
       <p class="card-bio">${esc(h.bio)}</p>
       <div class="chips">${(h.interests || []).map((i) => `<span class="chip ${mine.has(i.toLowerCase()) ? 'shared' : ''}">${esc(i)}</span>`).join('')}</div>
     </div>
@@ -463,6 +464,8 @@ function showDetails(h) {
     <div class="pair">${avatar(h)}</div>
     <div class="detail">
       <h3>${esc(h.name)}, ${h.age}</h3>
+      ${h.type ? `<div><span class="k">Personality</span><div><span class="type">${esc(h.type)}</span> ${esc(h.typeName || '')}${h.voice ? ` · ${esc(h.voice)}` : ''}</div></div>` : ''}
+      ${h.skill ? `<div class="skill-box"><span class="k">Skill · ${esc(h.skill.name)}</span><div>${esc(h.skill.tagline)}. Match, then tap <b>Help</b> in chat to use it.</div></div>` : ''}
       <div><span class="k">Breed</span><div>${esc(h.breed)} · ${esc(h.sex)} · ${h.height} hh</div></div>
       <div><span class="k">Stable</span><div>${esc(h.stable)} · ${h.distance} miles away</div></div>
       <div><span class="k">Favourite gait</span><div>${esc(h.gait)}</div></div>
@@ -541,7 +544,11 @@ async function renderMatches() {
 // ---------- chat ----------
 
 function msgHtml(m) {
-  return `<div class="msg ${m.fromId === state.me.id ? 'me' : 'them'}">${esc(m.text)}</div>`;
+  const mine = m.fromId === state.me.id;
+  const help = m.kind === 'help';
+  const skill = state.chatMatch?.horse?.skill;
+  const tag = help ? `<span class="msg-tag">${mine ? 'Asked for help' : `💡 ${esc(skill?.name || 'Help')}`}</span>` : '';
+  return `<div class="msg ${mine ? 'me' : 'them'} ${help ? 'help' : ''}">${tag}${esc(m.text)}</div>`;
 }
 
 async function openChat(match) {
@@ -559,7 +566,7 @@ async function openChat(match) {
     <div class="messages" id="messages"><div class="msg-sys">You matched with ${esc(h.name)}. Say something nice.</div></div>
     ${ended ? `<div class="msg-sys ended-note">${esc(h.name)} has moved on. You can still read the conversation.</div>` : `
     <div class="quick-replies" id="quick" aria-label="Suggested replies"><span class="quick-hint">Finding the words…</span></div>
-    <form class="composer" id="composer"><input id="chat-input" placeholder="Message ${esc(h.name)}" maxlength="500" autocomplete="off"><button type="submit">Send</button></form>`}
+    <form class="composer" id="composer">${h.skill ? `<button type="button" class="help-toggle" id="help-toggle" aria-pressed="false" title="${esc(h.skill.name)}: ${esc(h.skill.tagline)}">💡<span>Help</span></button>` : ''}<input id="chat-input" placeholder="Message ${esc(h.name)}" maxlength="500" autocomplete="off"><button type="submit">Send</button></form>`}
   </div>`;
   const list = $('#messages');
   const input = $('#chat-input');
@@ -577,6 +584,16 @@ async function openChat(match) {
         setTab('matches');
       } catch (err) { toast(err.message); }
     });
+  });
+  let helpMode = false;
+  const helpToggle = $('#help-toggle');
+  helpToggle?.addEventListener('click', () => {
+    helpMode = !helpMode;
+    helpToggle.setAttribute('aria-pressed', String(helpMode));
+    helpToggle.classList.toggle('on', helpMode);
+    input.placeholder = helpMode ? `Ask ${h.name} for help with…` : `Message ${h.name}`;
+    if (helpMode) toast(`${h.name} · ${h.skill.name}: ${h.skill.tagline}`, 2600);
+    input.focus();
   });
   const quick = $('#quick');
   quick?.addEventListener('click', (e) => {
@@ -614,8 +631,8 @@ async function openChat(match) {
     input.value = '';
     // Show the message and a typing indicator right away: an AI reply can take a few seconds.
     const pending = document.createElement('div');
-    pending.className = 'msg me pending';
-    pending.textContent = text;
+    pending.className = `msg me pending ${helpMode ? 'help' : ''}`;
+    pending.innerHTML = `${helpMode ? '<span class="msg-tag">Asked for help</span>' : ''}${esc(text)}`;
     list.appendChild(pending);
     const typing = document.createElement('div');
     typing.className = 'typing';
@@ -626,7 +643,7 @@ async function openChat(match) {
     suggestToken += 1;
     const startedAt = Date.now();
     try {
-      const { replies, aiError } = await api(`/api/matches/${match.id}/messages`, { method: 'POST', body: { fromId: state.me.id, text } });
+      const { replies, aiError } = await api(`/api/matches/${match.id}/messages`, { method: 'POST', body: { fromId: state.me.id, text, mode: helpMode ? 'help' : 'chat' } });
       pending.classList.remove('pending');
       const fellBack = state.aiReady && replies.some((r) => r.source === 'canned');
       const wait = Math.max(0, 900 - (Date.now() - startedAt));

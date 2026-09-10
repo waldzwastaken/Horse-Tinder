@@ -25,6 +25,8 @@ ANTHROPIC_API_KEY=sk-ant-... npm start
 
 ## What it does
 
+- **Sixteen personalities, sixteen skills.** Every seed horse is built around one personality type, from Biscuit the ESTP daredevil to Sir Reginald the INTJ strategist. The type shapes the bio, the voice in chat, and a skill the horse can help you with: Big Red splits an overwhelming job into steps, Muffin makes the decision for you, Willow preps you for the scary thing. Cards show the type and skill.
+- **Help mode.** In any chat, tap the Help toggle and ask for real help. With Claude on, the horse applies its skill prompt to your actual situation, still in character. Without it, you get the horse's scripted method for its skill.
 - **Create your horse.** Name, breed, colours, gait, interests, bio. Or hit "Try a demo horse" to get going instantly.
 - **Swipe.** Drag cards left or right, flick up for a Super Neigh, or use the buttons. Arrow keys work too, plus `Z` to rewind and `I` for details.
 - **Match.** Each card shows a compatibility score based on shared interests, gait and distance. Seed horses like you back deterministically when compatibility is high enough; a Super Neigh always lands.
@@ -54,7 +56,7 @@ All responses are JSON.
 | `GET` | `/api/horses/:id/stats` | Swiped, liked, matches, remaining |
 | `GET` | `/api/matches/:id/messages?as=:horseId` | Messages; passing `as` marks them read |
 | `GET` | `/api/matches/:id/suggestions?as=:horseId` | Up to three replies `as` could send next, with `source: "ai"`, `"rules"` or `"none"` |
-| `POST` | `/api/matches/:id/messages` | Body `{ fromId, text }`. Returns `{ message, replies }`; each reply carries `source: "ai"` or `"canned"` |
+| `POST` | `/api/matches/:id/messages` | Body `{ fromId, text, mode? }` with `mode` `"chat"` (default) or `"help"`. Returns `{ message, replies }`; each reply carries `source: "ai"` or `"canned"` and `kind` |
 | `DELETE` | `/api/matches/:id?as=:horseId` | Unmatch |
 
 ## Tests
@@ -74,9 +76,9 @@ server/
   store.js   horses, swipes, matches, messages, compatibility, reputation
   ai.js      Claude persona replies and reply suggestions (optional)
   suggest.js rule-based reply suggestions and scripted horse answers
-  horses.js  seed profiles, canned chat replies and farewells
+  horses.js  seed profiles (type, voice, skill), canned chat replies and farewells
 public/
   index.html, styles.css, app.js   the frontend
 test/
-  store.test.js, api.test.js, ai.test.js, suggest.test.js
+  store.test.js, api.test.js, ai.test.js, suggest.test.js, horses.test.js
 ```

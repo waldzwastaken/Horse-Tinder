@@ -80,7 +80,7 @@ function buildRoutes(store) {
     [
       'POST',
       '/api/matches/:id/messages',
-      async ({ params, body }) => [201, await store.sendMessage(params.id, String(body.fromId ?? ''), body.text)],
+      async ({ params, body }) => [201, await store.sendMessage(params.id, String(body.fromId ?? ''), body.text, body.mode ? String(body.mode) : 'chat')],
     ],
     [
       'DELETE',

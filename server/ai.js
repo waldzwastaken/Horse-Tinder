@@ -7,24 +7,45 @@
 
 export const DEFAULT_MODEL = 'claude-opus-5';
 const MAX_HISTORY = 20;
-const MAX_REPLY_CHARS = 400;
+const MAX_REPLY_CHARS = 700;
 
-export function buildPersona(horse, partner) {
+/**
+ * System prompt for a horse. `mode` is 'chat' (flirty small talk) or 'help'
+ * (the horse applies its skill to a real request from the partner).
+ */
+export function buildPersona(horse, partner, { mode = 'chat' } = {}) {
   const list = (arr) => (arr && arr.length ? arr.join(', ') : 'nothing in particular');
-  return [
+  const typeLine = horse.type ? `Your personality type is ${horse.type}${horse.typeName ? `, ${horse.typeName}` : ''}.` : '';
+  const voiceLine = horse.voice ? `How you talk: ${horse.voice}` : '';
+  const lines = [
     `You are ${horse.name}, a ${horse.age}-year-old ${horse.sex.toLowerCase()} ${horse.breed} on Horse Tinder, a dating app for horses.`,
     `You live at ${horse.stable}. You stand ${horse.height} hands. Your favourite gait is ${horse.gait.toLowerCase()}.`,
+    typeLine,
+    voiceLine,
     `Your bio: "${horse.bio}"`,
     `Your interests: ${list(horse.interests)}. You are looking for: ${horse.lookingFor}.`,
     '',
     `You matched with ${partner.name}, a ${partner.age}-year-old ${partner.sex.toLowerCase()} ${partner.breed} from ${partner.stable}.`,
     `${partner.name}'s bio: "${partner.bio}". Interests: ${list(partner.interests)}.`,
     '',
-    'You are chatting with them in the app. Stay fully in character as this horse: think and talk like a horse would, with horse concerns (hay, pasture, farriers, plastic bags, the water trough).',
-    'Be warm, playful and a little flirty, and keep it wholesome. Reference your own profile and theirs where it fits.',
-    'Reply with one or two short sentences, like a text message. No quotation marks around your reply, no narration, no emoji lists.',
-    'Never mention being an AI, a language model, or a simulation. If asked, you are simply a horse.',
-  ].join('\n');
+  ];
+  if (mode === 'help' && horse.skill) {
+    lines.push(
+      `${partner.name} has asked you for help, and this is your skill: ${horse.skill.name}. ${horse.skill.tagline}.`,
+      horse.skill.prompt,
+      'Give real, usable help for their actual situation. Stay in character as this horse and keep your voice, but put the substance first.',
+      'Reply in at most four short sentences or a short list. No quotation marks around your reply, no narration.',
+    );
+  } else {
+    lines.push(
+      'You are chatting with them in the app. Stay fully in character as this horse: think and talk like a horse would, with horse concerns (hay, pasture, farriers, plastic bags, the water trough).',
+      'Let your personality type show in how you respond. Be warm, playful and a little flirty, and keep it wholesome. Reference your own profile and theirs where it fits.',
+      horse.skill ? `If they seem to need real help with something, you may mention that ${horse.skill.name.toLowerCase()} is your thing and invite them to ask.` : '',
+      'Reply with one or two short sentences, like a text message. No quotation marks around your reply, no narration, no emoji lists.',
+    );
+  }
+  lines.push('Never mention being an AI, a language model, or a simulation. If asked, you are simply a horse.');
+  return lines.filter((l) => l !== '' || true).filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n');
 }
 
 /**
@@ -132,15 +153,15 @@ export function createClaudeReplier({
     return clientPromise;
   }
 
-  return async function reply({ horse, partner, history }) {
+  return async function reply({ horse, partner, history, mode = 'chat' }) {
     const messages = buildTurns(history, horse.id);
     if (!messages.length) return null;
     try {
       const api = await getClient();
       const response = await api.beta.messages.create({
         model,
-        max_tokens: 300,
-        system: buildPersona(horse, partner),
+        max_tokens: mode === 'help' ? 600 : 300,
+        system: buildPersona(horse, partner, { mode }),
         messages,
         output_config: { effort: 'low' },
         betas: ['server-side-fallback-2026-07-01'],

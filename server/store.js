@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { SEED_HORSES, HORSE_REPLIES, HORSE_FAREWELLS } from './horses.js';
+import { SEED_HORSES, HORSE_REPLIES, HORSE_FAREWELLS, TYPE_NAMES } from './horses.js';
 import { suggestReplies, cannedReply } from './suggest.js';
 
 const VALID_SEX = ['Mare', 'Stallion', 'Gelding'];
@@ -140,6 +140,11 @@ export class Store {
       this.state = JSON.parse(readFileSync(this.file, 'utf8'));
     } else {
       this.state.horses = seed.map((h) => ({ ...h, seed: true, createdAt: 0 }));
+    }
+    // Seed profiles can gain fields between releases; refresh them on load so saved data picks them up.
+    for (const fresh of seed) {
+      const existing = this.state.horses.find((h) => h.id === fresh.id && h.seed);
+      if (existing) Object.assign(existing, fresh, { typeName: fresh.typeName || TYPE_NAMES[fresh.type] || null });
     }
   }
 
@@ -356,14 +361,16 @@ export class Store {
   /**
    * Send a message. If the other horse is a seed horse it replies: through the
    * configured AI replier when one is set, otherwise with a canned line.
+   * `mode` is 'chat' or 'help'; in help mode the horse applies its skill.
    */
-  async sendMessage(matchId, fromId, text) {
+  async sendMessage(matchId, fromId, text, mode = 'chat') {
+    if (!['chat', 'help'].includes(mode)) throw new ValidationError('Mode must be chat or help');
     const match = this.getMatch(matchId);
     if (!match.horseIds.includes(fromId)) throw new ValidationError('Not your match');
     if (!this.isActive(match)) throw new ValidationError('This horse has moved on');
     const body = clean(text, 500);
     if (!body) throw new ValidationError('Message cannot be empty');
-    const msg = { id: this.nextId('msg'), matchId, fromId, text: body, at: this.now(), read: false };
+    const msg = { id: this.nextId('msg'), matchId, fromId, text: body, at: this.now(), read: false, kind: mode };
     this.state.messages.push(msg);
     this.persist();
 
@@ -377,11 +384,14 @@ export class Store {
       let source = 'canned';
       if (this.replier) {
         try {
-          replyText = await this.replier({ horse: other, partner: me, history });
+          replyText = await this.replier({ horse: other, partner: me, history, mode });
           if (replyText) source = 'ai';
         } catch {
           replyText = null;
         }
+      }
+      if (!replyText && mode === 'help' && other.skill?.fallback) {
+        replyText = other.skill.fallback;
       }
       if (!replyText) {
         // Answer what was said when a rule fits; otherwise a stable pick from the general lines.
@@ -400,6 +410,7 @@ export class Store {
         at: this.now(),
         read: false,
         source,
+        kind: mode,
       };
       this.state.messages.push(reply);
       replies.push(reply);
