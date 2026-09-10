@@ -29,6 +29,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
+/* iOS Safari zooms the page when a focused control is set below 16px; keep every text control at 16px. */
+input, select, textarea { font-size: 16px; }
 button { cursor: pointer; }
 h1, h2, h3 { margin: 0; line-height: 1.15; }
 p { margin: 0; }
@@ -349,7 +351,7 @@ p { margin: 0; }
 .typing i:nth-child(2) { animation-delay: .2s; }
 .typing i:nth-child(3) { animation-delay: .4s; }
 .composer { display: flex; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
-.composer input { flex: 1; border: 1.5px solid var(--line); border-radius: 999px; padding: 11px 16px; background: #fff; outline: none; }
+.composer input { flex: 1; min-width: 0; border: 1.5px solid var(--line); border-radius: 999px; padding: 10px 16px; background: #fff; outline: none; font-size: 16px; }
 .composer input:focus { border-color: var(--accent-2); }
 .composer button { border: 0; border-radius: 999px; padding: 0 18px; background: var(--accent); color: #fff; font-weight: 900; }
 .quick-replies { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 2px; min-height: 42px; align-items: center; }
