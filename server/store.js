@@ -66,11 +66,11 @@ export function likesBack(a, b, bonus = 0) {
 
 /** Human label for a reputation score. */
 export function reputationLabel(score) {
-  if (score >= 80) return 'Barn favourite';
-  if (score >= 60) return 'Good company';
-  if (score >= 40) return 'Solid citizen';
+  if (score >= 80) return 'Herd hero';
+  if (score >= 60) return 'Good friend';
+  if (score >= 40) return 'Getting there';
   if (score >= 20) return 'Bit of a ghost';
-  return 'Pasture pariah';
+  return 'Lonely pony';
 }
 
 /** Like-back bonus derived from reputation: -10 at 0, 0 at 50, +10 at 100. */
@@ -367,7 +367,7 @@ export class Store {
     if (!['chat', 'help'].includes(mode)) throw new ValidationError('Mode must be chat or help');
     const match = this.getMatch(matchId);
     if (!match.horseIds.includes(fromId)) throw new ValidationError('Not your match');
-    if (!this.isActive(match)) throw new ValidationError('This horse has moved on');
+    if (!this.isActive(match)) throw new ValidationError('This horse has gone back to the herd');
     const body = clean(text, 500);
     if (!body) throw new ValidationError('Message cannot be empty');
     const msg = { id: this.nextId('msg'), matchId, fromId, text: body, at: this.now(), read: false, kind: mode };

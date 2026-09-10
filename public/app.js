@@ -177,7 +177,7 @@ function horseFormHtml(h = {}) {
     <div class="field"><label for="f-name">Name</label><input id="f-name" name="name" required maxlength="40" placeholder="e.g. Buttercup" value="${esc(h.name || '')}"></div>
     <div class="row">
       <div class="field"><label for="f-age">Age</label><input id="f-age" name="age" type="number" min="1" max="45" required value="${h.age || 5}"></div>
-      <div class="field"><label for="f-sex">Sex</label><select id="f-sex" name="sex">${opt(['Mare', 'Stallion', 'Gelding'], h.sex || 'Mare')}</select></div>
+      <div class="field"><label for="f-sex">Kind</label><select id="f-sex" name="sex">${opt(['Mare', 'Stallion', 'Gelding'], h.sex || 'Mare')}</select></div>
     </div>
     <div class="row">
       <div class="field"><label for="f-breed">Breed</label><input id="f-breed" name="breed" maxlength="40" placeholder="Quarter Horse" value="${esc(h.breed || '')}"></div>
@@ -252,7 +252,7 @@ function renderOnboarding() {
   $('#hero-art').innerHTML = horseSvg('#b5651d', '#3b2412', { blaze: true });
   const form = $('#create-form');
   form.innerHTML = `${horseFormHtml({ interests: ['Trail rides', 'Apples'] })}
-    <button class="btn btn-primary btn-block" type="submit">Start swiping 🐴</button>
+    <button class="btn btn-primary btn-block" type="submit">Meet the herd 🐴</button>
     <div class="or">or</div>
     <button class="btn btn-block" type="button" id="demo-btn">Try a demo horse</button>`;
   wireHorseForm(form);
@@ -284,14 +284,14 @@ function renderOnboarding() {
       coat: COATS[Math.floor(Math.random() * COATS.length)],
       mane: MANES[Math.floor(Math.random() * MANES.length)],
       interests: ['Trail rides', 'Apples', 'Mud baths', 'Sunsets'],
-      bio: 'Just here to see what all the fuss is about. Will trade hay for compliments.',
+      bio: 'Just here to see what all the fuss is about. Will trade hay for jokes.',
       lookingFor: 'A pasture buddy',
     };
     try {
       const me = await api('/api/horses', { method: 'POST', body: demo });
       localStorage.setItem(ME_KEY, me.id);
       state.me = me;
-      toast(`You are ${me.name} now. Go get 'em.`);
+      toast(`You are ${me.name} now. Go and meet the herd.`);
       await boot();
     } catch (err) {
       toast(err.message);
@@ -319,9 +319,9 @@ function cardHtml(h) {
   const mine = new Set((state.me.interests || []).map((s) => s.toLowerCase()));
   return `<article class="card" data-id="${h.id}" tabindex="0" aria-label="${esc(h.name)}, ${h.age}">
     <div class="card-art" style="background:linear-gradient(160deg,${shade(h.coat, 100)},${shade(h.coat, 30)})">
-      <span class="compat">🍀 <b>${h.compatibility}%</b> match</span>
+      <span class="compat">🍀 <b>${h.compatibility}%</b> friend match</span>
       <span class="dist">📍 ${h.distance} mi</span>
-      <div class="stamp stamp-like">LIKE</div>
+      <div class="stamp stamp-like">FRIEND</div>
       <div class="stamp stamp-nope">NOPE</div>
       <div class="stamp stamp-super">SUPER NEIGH</div>
       ${horseSvg(h.coat, h.mane, { blaze: hasBlaze(h) })}
@@ -341,8 +341,8 @@ function paintDeck() {
   const actions = $('#actions');
   if (!deck) return;
   if (!state.deck.length) {
-    deck.innerHTML = `<div class="empty"><div class="big">🌾</div><h2>The pasture is empty</h2><p>You have seen every horse in range. Check your matches, or widen your search by editing your profile.</p>
-      <button class="btn btn-primary" id="go-matches">See matches</button></div>`;
+    deck.innerHTML = `<div class="empty"><div class="big">🌾</div><h2>The pasture is empty</h2><p>You have met every horse in range. Go and chat with your friends.</p>
+      <button class="btn btn-primary" id="go-matches">See friends</button></div>`;
     actions.innerHTML = '';
     $('#go-matches').addEventListener('click', () => setTab('matches'));
     return;
@@ -431,7 +431,7 @@ async function swipeTop(direction) {
       if (result.ghosted?.length) {
         refreshMatches();
         const names = result.ghosted.map((h) => h.name).join(' and ');
-        toast(`${names} got tired of waiting and walked away. 💔`, 3500);
+        toast(`${names} got tired of waiting and wandered off. 🌾`, 3500);
       }
       if (result.match) {
         refreshMatches();
@@ -454,7 +454,7 @@ function rewind() {
   // Swipes are final on the server; rewinding just brings the card back for another look.
   state.deck.unshift({ ...last.horse, rewound: true });
   paintDeck();
-  toast(`Brought ${last.horse.name} back. Swipes are still on the record, though.`);
+  toast(`Brought ${last.horse.name} back for another look.`);
 }
 
 function showDetails(h) {
@@ -465,7 +465,7 @@ function showDetails(h) {
     <div class="detail">
       <h3>${esc(h.name)}, ${h.age}</h3>
       ${h.type ? `<div><span class="k">Personality</span><div><span class="type">${esc(h.type)}</span> ${esc(h.typeName || '')}${h.voice ? ` · ${esc(h.voice)}` : ''}</div></div>` : ''}
-      ${h.skill ? `<div class="skill-box"><span class="k">Skill · ${esc(h.skill.name)}</span><div>${esc(h.skill.tagline)}. Match, then tap <b>Help</b> in chat to use it.</div></div>` : ''}
+      ${h.skill ? `<div class="skill-box"><span class="k">Skill · ${esc(h.skill.name)}</span><div>${esc(h.skill.tagline)}. Become friends, then tap <b>Help</b> in chat.</div></div>` : ''}
       <div><span class="k">Breed</span><div>${esc(h.breed)} · ${esc(h.sex)} · ${h.height} hh</div></div>
       <div><span class="k">Stable</span><div>${esc(h.stable)} · ${h.distance} miles away</div></div>
       <div><span class="k">Favourite gait</span><div>${esc(h.gait)}</div></div>
@@ -480,8 +480,8 @@ function showDetails(h) {
 function showMatch(horse, match) {
   confetti();
   const modal = openModal(`
-    <h2>It's a Match!</h2>
-    <p>You and ${esc(horse.name)} both swiped right. Time to break the ice.</p>
+    <h2>New friend!</h2>
+    <p>You and ${esc(horse.name)} both want to be friends. Say hi!</p>
     <div class="pair">${avatar(state.me)}${avatar(horse)}</div>
     <button class="btn btn-primary btn-block" id="match-chat">Send a neigh 💬</button>
     <button class="btn btn-ghost btn-block" id="match-keep">Keep swiping</button>`);
@@ -511,8 +511,8 @@ async function refreshMatches() {
 async function renderMatches() {
   await refreshMatches();
   if (!state.matches.length) {
-    view.innerHTML = `<div class="empty"><div class="big">🐴💔</div><h2>No matches yet</h2><p>Keep swiping. Somewhere out there is a horse who also loves mud baths.</p>
-      <button class="btn btn-primary" id="go-swipe">Start swiping</button></div>`;
+    view.innerHTML = `<div class="empty"><div class="big">🐴🌾</div><h2>No friends yet</h2><p>Keep meeting horses. Somewhere out there is one who also loves mud baths.</p>
+      <button class="btn btn-primary" id="go-swipe">Meet horses</button></div>`;
     $('#go-swipe').addEventListener('click', () => setTab('swipe'));
     return;
   }
@@ -527,11 +527,11 @@ async function renderMatches() {
         ${m.unread ? '<span class="dot"></span>' : ''}
       </button>`;
   view.innerHTML = `
-    ${fresh.length ? `<div class="section-title">New matches</div><div class="new-matches">${fresh.map((m) => `
+    ${fresh.length ? `<div class="section-title">New friends</div><div class="new-matches">${fresh.map((m) => `
       <button class="new-match" data-id="${m.id}">${avatar(m.horse)}<span>${esc(m.horse.name)}</span></button>`).join('')}</div>` : ''}
     <div class="section-title">Messages</div>
     <div class="list">${convos.length ? convos.map(row).join('') : `<p class="or" style="padding:16px">Say hi to a new match to start a conversation. Horses do not wait forever.</p>`}
-    ${ended.length ? `<div class="section-title muted">Walked away</div>${ended.map(row).join('')}` : ''}</div>`;
+    ${ended.length ? `<div class="section-title muted">Wandered off</div>${ended.map(row).join('')}` : ''}</div>`;
   // Assigned, not added: renders happen often and stacked listeners would open a chat twice.
   view.onclick = (e) => {
     const b = e.target.closest('[data-id]');
@@ -560,11 +560,11 @@ async function openChat(match) {
     <div class="chat-head">
       <button class="icon-btn" id="chat-back" aria-label="Back">←</button>
       ${avatar(h)}
-      <div class="who"><strong>${esc(h.name)}</strong><span class="sub">${ended ? 'walked away' : `${esc(h.breed)} · ${esc(h.stable)} · matched ${timeAgo(match.at)}`}</span></div>
-      <button class="icon-btn" id="chat-unmatch" title="${ended ? 'Delete conversation' : 'Unmatch'}" aria-label="${ended ? 'Delete conversation' : 'Unmatch'}">🗑️</button>
+      <div class="who"><strong>${esc(h.name)}</strong><span class="sub">${ended ? 'wandered off' : `${esc(h.breed)} · ${esc(h.stable)} · friends since ${timeAgo(match.at)}`}</span></div>
+      <button class="icon-btn" id="chat-unmatch" title="${ended ? 'Delete chat' : 'Say goodbye'}" aria-label="${ended ? 'Delete chat' : 'Say goodbye'}">🗑️</button>
     </div>
-    <div class="messages" id="messages"><div class="msg-sys">You matched with ${esc(h.name)}. Say something nice.</div></div>
-    ${ended ? `<div class="msg-sys ended-note">${esc(h.name)} has moved on. You can still read the conversation.</div>` : `
+    <div class="messages" id="messages"><div class="msg-sys">You and ${esc(h.name)} are friends now. Say something nice.</div></div>
+    ${ended ? `<div class="msg-sys ended-note">${esc(h.name)} has gone back to the herd. You can still read your chat.</div>` : `
     <div class="quick-replies" id="quick" aria-label="Suggested replies"><span class="quick-hint">Finding the words…</span></div>
     <form class="composer" id="composer">${h.skill ? `<button type="button" class="help-toggle" id="help-toggle" aria-pressed="false" title="${esc(h.skill.name)}: ${esc(h.skill.tagline)}">💡<span>Help</span></button>` : ''}<input id="chat-input" placeholder="Message ${esc(h.name)}" maxlength="500" autocomplete="off"><button type="submit">Send</button></form>`}
   </div>`;
@@ -573,14 +573,14 @@ async function openChat(match) {
   const endedNote = $('.ended-note', view);
   $('#chat-back').addEventListener('click', () => setTab('matches'));
   $('#chat-unmatch').addEventListener('click', () => {
-    const modal = openModal(`<h2 style="font-size:24px">Unmatch ${esc(h.name)}?</h2><p>This deletes the conversation. ${esc(h.name)} will not be told, but will probably sense it.</p>
-      <button class="btn btn-danger btn-block" id="um-yes">Unmatch</button><button class="btn btn-ghost btn-block" id="um-no">Never mind</button>`);
+    const modal = openModal(`<h2 style="font-size:24px">Say goodbye to ${esc(h.name)}?</h2><p>This deletes your chat. ${esc(h.name)} will go back to the field.</p>
+      <button class="btn btn-danger btn-block" id="um-yes">Say goodbye</button><button class="btn btn-ghost btn-block" id="um-no">Never mind</button>`);
     $('#um-no', modal).addEventListener('click', closeModal);
     $('#um-yes', modal).addEventListener('click', async () => {
       try {
         await api(`/api/matches/${match.id}?as=${state.me.id}`, { method: 'DELETE' });
         closeModal();
-        toast(`Unmatched ${h.name}.`);
+        toast(`Said goodbye to ${h.name}.`);
         setTab('matches');
       } catch (err) { toast(err.message); }
     });
@@ -662,7 +662,7 @@ async function openChat(match) {
       pending.remove();
       typing.remove();
       toast(err.message);
-      if (/moved on/i.test(err.message)) { await refreshMatches(); const m = state.matches.find((x) => x.id === match.id); if (m) openChat(m); }
+      if (/moved on|gone back/i.test(err.message)) { await refreshMatches(); const m = state.matches.find((x) => x.id === match.id); if (m) openChat(m); }
     } finally {
       sending = false;
     }
@@ -679,17 +679,17 @@ async function renderProfile() {
   view.innerHTML = `<div class="profile">
     <div class="profile-hero">${avatar(me)}<div><h2>${esc(me.name)}, ${me.age}</h2><div class="sub">${esc(me.breed)} · ${esc(me.sex)} · ${me.height} hh</div><div class="sub">${esc(me.stable)}</div></div></div>
     <div class="stats">
-      <div class="stat"><b>${stats.swiped}</b><span>Swiped</span></div>
-      <div class="stat"><b>${stats.liked}</b><span>Liked</span></div>
-      <div class="stat"><b>${stats.matches}</b><span>Matches</span></div>
+      <div class="stat"><b>${stats.swiped}</b><span>Met</span></div>
+      <div class="stat"><b>${stats.liked}</b><span>Said yes</span></div>
+      <div class="stat"><b>${stats.matches}</b><span>Friends</span></div>
       <div class="stat"><b>${stats.remaining}</b><span>Left</span></div>
     </div>
     ${stats.reputation ? `<div class="rep">
-      <div class="rep-score"><b>${stats.reputation.score}</b><span>Stable reputation</span></div>
+      <div class="rep-score"><b>${stats.reputation.score}</b><span>Friend score</span></div>
       <div class="rep-body">
         <strong>${esc(stats.reputation.label)}</strong>
-        <p>Long conversations raise it. Leaving a horse on read lowers it. ${stats.reputation.bonus > 0 ? `Right now horses are <b>${stats.reputation.bonus} points</b> more likely to like you back.` : stats.reputation.bonus < 0 ? `Right now horses are <b>${-stats.reputation.bonus} points</b> less likely to like you back.` : 'Right now it is not tipping the scales either way.'}</p>
-        <p class="rep-meta">${stats.reputation.sent} sent · ${stats.reputation.deep} real conversation${stats.reputation.deep === 1 ? '' : 's'} · ${stats.reputation.ghosted} ghosted</p>
+        <p>Chatting with your friends raises it. Ignoring a friend who wrote to you lowers it. ${stats.reputation.bonus > 0 ? `Right now horses are <b>${stats.reputation.bonus} points</b> more likely to want to be your friend.` : stats.reputation.bonus < 0 ? `Right now horses are <b>${-stats.reputation.bonus} points</b> less likely to want to be your friend.` : 'Right now it is not changing anything.'}</p>
+        <p class="rep-meta">${stats.reputation.sent} sent · ${stats.reputation.deep} proper chat${stats.reputation.deep === 1 ? '' : 's'} · ${stats.reputation.ghosted} wandered off</p>
       </div>
     </div>` : ''}
     <p style="color:var(--ink-2);font-size:14px">${esc(me.bio)}</p>

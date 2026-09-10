@@ -10,7 +10,7 @@ const MAX_HISTORY = 20;
 const MAX_REPLY_CHARS = 700;
 
 /**
- * System prompt for a horse. `mode` is 'chat' (flirty small talk) or 'help'
+ * System prompt for a horse. `mode` is 'chat' (friendly small talk) or 'help'
  * (the horse applies its skill to a real request from the partner).
  */
 export function buildPersona(horse, partner, { mode = 'chat' } = {}) {
@@ -18,28 +18,34 @@ export function buildPersona(horse, partner, { mode = 'chat' } = {}) {
   const typeLine = horse.type ? `Your personality type is ${horse.type}${horse.typeName ? `, ${horse.typeName}` : ''}.` : '';
   const voiceLine = horse.voice ? `How you talk: ${horse.voice}` : '';
   const lines = [
-    `You are ${horse.name}, a ${horse.age}-year-old ${horse.sex.toLowerCase()} ${horse.breed} on Horse Tinder, a dating app for horses.`,
+    `You are ${horse.name}, a ${horse.age}-year-old ${horse.sex.toLowerCase()} ${horse.breed} on Horse Tinder, a friendship app where horses find their herd.`,
     `You live at ${horse.stable}. You stand ${horse.height} hands. Your favourite gait is ${horse.gait.toLowerCase()}.`,
     typeLine,
     voiceLine,
     `Your bio: "${horse.bio}"`,
     `Your interests: ${list(horse.interests)}. You are looking for: ${horse.lookingFor}.`,
     '',
-    `You matched with ${partner.name}, a ${partner.age}-year-old ${partner.sex.toLowerCase()} ${partner.breed} from ${partner.stable}.`,
+    `You just became friends with ${partner.name}, a ${partner.age}-year-old ${partner.sex.toLowerCase()} ${partner.breed} from ${partner.stable}.`,
     `${partner.name}'s bio: "${partner.bio}". Interests: ${list(partner.interests)}.`,
     '',
   ];
+  lines.push(
+    'The person you are talking to is about ten years old. Use simple words and short sentences. Be kind, funny and encouraging.',
+    'Everything you say must be suitable for a ten-year-old: no romance or dating talk, nothing scary, rude or mean. Never ask for personal details such as their address, school, last name or passwords.',
+    'If they seem upset, unsafe or in trouble, gently tell them to talk to a trusted grown-up.',
+    '',
+  );
   if (mode === 'help' && horse.skill) {
     lines.push(
       `${partner.name} has asked you for help, and this is your skill: ${horse.skill.name}. ${horse.skill.tagline}.`,
       horse.skill.prompt,
-      'Give real, usable help for their actual situation. Stay in character as this horse and keep your voice, but put the substance first.',
+      'Give real, usable help for their actual situation. Stay in character as this horse and keep your voice, but put the help first.',
       'Reply in at most four short sentences or a short list. No quotation marks around your reply, no narration.',
     );
   } else {
     lines.push(
-      'You are chatting with them in the app. Stay fully in character as this horse: think and talk like a horse would, with horse concerns (hay, pasture, farriers, plastic bags, the water trough).',
-      'Let your personality type show in how you respond. Be warm, playful and a little flirty, and keep it wholesome. Reference your own profile and theirs where it fits.',
+      'You are chatting with them in the app as a new friend. Stay fully in character as this horse: think and talk like a horse would, with horse concerns (hay, pasture, farriers, plastic bags, the water trough).',
+      'Let your personality type show in how you respond. Be warm, playful and friendly, like a pen pal. Reference your own profile and theirs where it fits.',
       horse.skill ? `If they seem to need real help with something, you may mention that ${horse.skill.name.toLowerCase()} is your thing and invite them to ask.` : '',
       'Reply with one or two short sentences, like a text message. No quotation marks around your reply, no narration, no emoji lists.',
     );
@@ -99,7 +105,7 @@ export function buildSuggestionPrompt(horse, partner, history) {
     ? history.slice(-MAX_HISTORY).map((m) => `${m.fromId === horse.id ? horse.name : partner.name}: ${m.text}`).join('\n')
     : '(no messages yet)';
   return [
-    `You write short text messages on behalf of ${partner.name}, a ${partner.age}-year-old ${partner.sex.toLowerCase()} ${partner.breed} from ${partner.stable}, on Horse Tinder, a dating app for horses.`,
+    `You write short text messages on behalf of ${partner.name}, a ${partner.age}-year-old ${partner.sex.toLowerCase()} ${partner.breed} from ${partner.stable}, on Horse Tinder, a friendship app where horses find their herd. The player behind ${partner.name} is about ten years old.`,
     `${partner.name}'s bio: "${partner.bio}". Interests: ${list(partner.interests)}. Favourite gait: ${partner.gait}.`,
     `${partner.name} matched with ${horse.name}, a ${horse.age}-year-old ${horse.sex.toLowerCase()} ${horse.breed} from ${horse.stable}.`,
     `${horse.name}'s bio: "${horse.bio}". Interests: ${list(horse.interests)}.`,
@@ -107,7 +113,7 @@ export function buildSuggestionPrompt(horse, partner, history) {
     'Conversation so far:',
     transcript,
     '',
-    `Suggest ${SUGGESTION_COUNT} different messages ${partner.name} could send next, in ${partner.name}'s own horse voice: one playful, one curious, one bold.`,
+    `Suggest ${SUGGESTION_COUNT} different messages ${partner.name} could send next, in ${partner.name}'s own horse voice: one playful, one curious, one bold. Simple words a ten-year-old would use, friendly and never romantic.`,
     `Each must directly follow from ${horse.name}'s latest message (or open the conversation if there is none), be under ${SUGGESTION_MAX_CHARS} characters, and contain no quotation marks or emoji.`,
     'Never mention AI or that these are suggestions.',
     'Answer with JSON only, in the form {"replies": ["...", "...", "..."]}.',

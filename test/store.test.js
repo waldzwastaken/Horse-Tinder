@@ -172,16 +172,16 @@ test('unread counts and read receipts', async () => {
 test('reputation rises with conversation and lowers the bar for matches', async () => {
   const store = makeStore();
   const me = store.createHorse(userInput);
-  assert.deepEqual(store.reputation(me.id), { score: 50, label: 'Solid citizen', sent: 0, deep: 0, ghosted: 0, bonus: 0 });
+  assert.deepEqual(store.reputation(me.id), { score: 50, label: 'Getting there', sent: 0, deep: 0, ghosted: 0, bonus: 0 });
   const { match } = store.swipe(me.id, 'b', 'like');
   for (const line of ['hi', 'how is the hay', 'same', 'trough later?']) await store.sendMessage(match.id, me.id, line);
   const rep = store.reputation(me.id);
   assert.equal(rep.score, 64, '50 + 4 messages * 2 + one deep conversation * 6');
-  assert.equal(rep.label, 'Good company');
+  assert.equal(rep.label, 'Good friend');
   assert.equal(rep.bonus, 3);
   assert.equal(store.stats(me.id).reputation.score, 64);
-  assert.equal(reputationLabel(85), 'Barn favourite');
-  assert.equal(reputationLabel(10), 'Pasture pariah');
+  assert.equal(reputationLabel(85), 'Herd hero');
+  assert.equal(reputationLabel(10), 'Lonely pony');
   assert.equal(reputationBonus(100), 10);
   assert.equal(reputationBonus(0), -10);
   // A borderline pair flips with reputation: find a case where the bonus matters.
@@ -209,7 +209,7 @@ test('a horse left waiting walks away after enough swipes', async () => {
   assert.equal(m.endedReason, 'ghosted');
   assert.equal(m.lastMessage.fromId, 'b', 'the horse leaves a farewell');
   assert.equal(m.unread, 2, 'their unanswered reply plus the farewell');
-  await assert.rejects(() => store.sendMessage(match.id, me.id, 'wait!'), /moved on/);
+  await assert.rejects(() => store.sendMessage(match.id, me.id, 'wait!'), /gone back to the herd/);
   assert.equal(store.reputation(me.id).score, 40, '50 + 2 for one message - 12 for ghosting');
   assert.equal(store.stats(me.id).matches, 0, 'ended matches no longer count');
   // Only once per match.

@@ -35,9 +35,10 @@ test('persona carries the type, voice and skill, and switches into help mode', (
   assert.match(chat, /one or two short sentences/);
   const help = buildPersona(horse, partner, { mode: 'help' });
   assert.match(help, /asked you for help, and this is your skill: Heavy lifter/);
-  assert.match(help, /four to six ordered pieces/);
+  assert.match(help, /four to six pieces in order/);
   assert.match(help, /at most four short sentences/);
-  assert.doesNotMatch(help, /flirty/);
+  assert.doesNotMatch(help, /flirt/);
+  assert.match(help, /suitable for a ten-year-old/);
   assert.doesNotMatch(help, /\n\n\n/, 'no triple blank lines');
 });
 

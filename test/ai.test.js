@@ -10,8 +10,11 @@ test('persona carries both profiles and the in-character rules', () => {
   const p = buildPersona(horse, partner);
   assert.match(p, /You are Biscuit/);
   assert.match(p, /Willow Creek Stables/);
-  assert.match(p, /matched with Tester/);
+  assert.match(p, /became friends with Tester/);
   assert.match(p, /Never mention being an AI/);
+  assert.match(p, /about ten years old/);
+  assert.match(p, /trusted grown-up/);
+  assert.doesNotMatch(p, /flirt/);
 });
 
 test('turns map the horse to assistant and always end on a user turn', () => {

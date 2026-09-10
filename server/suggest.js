@@ -11,13 +11,13 @@ const RULES = [
   [/race|fence|gallop|\brun\b|zoom/, ['You are on. Far fence, go!', 'Only if you give me a head start.']],
   [/farrier|hoof|hooves|shoe/, ['Thoughts and prayers. Want company?', 'Mine is next week. We can be brave together.']],
   [/plastic|\bbag\b|scary|spook/, ['Deep breaths. Bags cannot hurt you.', 'I would have spooked too, honestly.']],
-  [/mane|coat|shiny|pretty|lovely|handsome|beautiful|noticed/, ['Yours is not bad either.', 'Stop, I am blushing under all this hair.']],
+  [/mane|coat|shiny|pretty|lovely|handsome|beautiful|noticed/, ['Thanks! I brushed it specially.', 'Yours is great too.']],
   [/ridden|rider|human|saddle/, ['Depends who is asking.', 'My human is fine. Yours?']],
   [/pasture|side|field|stall|barn/, ['Left side, obviously.', 'Wherever you are, apparently.']],
   [/\?/, ['Good question. You first.', 'Yes. Obviously yes.']],
 ];
 
-const GENERIC = ['Ha! Same here.', 'Tell me more.', 'Meet at the fence later?', 'You are trouble, I can tell.', 'Noted. Continue.'];
+const GENERIC = ['Ha! Same here.', 'Tell me more.', 'Meet at the fence later?', 'You are funny, I can tell.', 'Okay, go on.'];
 
 function sharedInterests(horse, partner) {
   const mine = new Set((partner.interests || []).map((s) => s.toLowerCase()));
@@ -100,16 +100,16 @@ const ANSWER_RULES = [
   }],
   [/farrier|hoof|hooves|shoe/, () => 'Do not say that word. My appointment is Tuesday and I am not okay.'],
   [/plastic|\bbag\b|scary|spook|afraid/, () => 'I saw a plastic bag last week and I am still recovering. Hold my mane.'],
-  [/\bmane\b|\bcoat\b|shiny|pretty|handsome|beautiful|lovely|gorgeous|cute/, (h, p) => `Stop, you are making me blush under all this hair. Yours is not bad either, ${p.name}.`],
+  [/\bmane\b|\bcoat\b|shiny|pretty|handsome|beautiful|lovely|gorgeous|cute/, (h, p) => `Thanks! I brushed it for a whole hour. Yours is great too, ${p.name}.`],
   [/where|stable|barn|live|from|home/, (h) => `${h.stable}. Decent hay, questionable neighbours, ${h.distance} miles from you.`],
   [/ridden|rider|human|saddle|owner/, () => 'My human is fine. Brings carrots, talks too much, means well.'],
   [/gait|trot|canter|lope|walk/, (h) => `${h.gait}, no question. Have you seen me ${h.gait.toLowerCase()}? People stop and stare.`],
   [/how old|age|years/, (h) => `${h.age}. Which is the perfect age, everyone says so. Mostly me.`],
   [/\b(hi|hello|hey|hay there|neigh|howdy|morning|evening)\b/, (h, p) => `Neigh! I was hoping you would write. Tell me about ${((p.interests || [])[0] || 'your pasture').toLowerCase()}.`],
-  [/date|meet|see you|hang out|come over/, (h) => `Yes. ${h.stable}, by the far gate, when the humans have gone in.`],
+  [/meet|see you|hang out|come over|play/, (h) => `Yes! ${h.stable}, by the far gate, after school. Bring snacks.`],
   [/\b(do|are|will|would|can|could|have|did|is)\s+you\b.*\?/, () => 'Yes. Obviously yes. When do we start?'],
   [/\?/, () => 'Good question. I would say yes, but ask me again after lunch.'],
-  [/love|like you|crush|miss you|heart/, (h, p) => `${p.name}, I have thought about you at every feeding today. That is a lot of feedings.`],
+  [/best friend|like you|miss you|friend/, (h, p) => `${p.name}, you are my favourite horse to talk to. And I talk to a lot of horses.`],
 ];
 
 export function cannedReply(horse, partner, history = []) {
