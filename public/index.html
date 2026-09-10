@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Horse Tinder</title>
+  <meta name="description" content="Swipe right on your next pasture partner." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%90%B4%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="app" class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">🐴</span>
+        <span class="brand-name">Horse<span>Tinder</span></span>
+      </div>
+      <div class="topbar-right" id="topbar-right"></div>
+    </header>
+
+    <main id="view" class="view" aria-live="polite"></main>
+
+    <nav class="tabs" id="tabs" aria-label="Main">
+      <button class="tab" data-tab="swipe" aria-label="Swipe">
+        <span class="tab-icon">🔥</span><span class="tab-label">Swipe</span>
+      </button>
+      <button class="tab" data-tab="matches" aria-label="Matches">
+        <span class="tab-icon">💬</span><span class="tab-label">Matches</span>
+        <span class="tab-badge" id="matches-badge" hidden></span>
+      </button>
+      <button class="tab" data-tab="profile" aria-label="Profile">
+        <span class="tab-icon">🐎</span><span class="tab-label">Profile</span>
+      </button>
+    </nav>
+
+    <div id="modal-root"></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </div>
+
+  <template id="tpl-onboarding">
+    <section class="onboarding">
+      <div class="hero">
+        <div class="hero-art" id="hero-art"></div>
+        <h1>Find your herd.</h1>
+        <p>Swipe right on your next pasture partner. Create your horse to start trotting.</p>
+      </div>
+      <form id="create-form" class="form" autocomplete="off"></form>
+    </section>
+  </template>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

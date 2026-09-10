@@ -1,0 +1,17 @@
+{
+  "name": "horse-tinder",
+  "version": "1.0.0",
+  "description": "Swipe right on your next pasture partner. A dating app for horses.",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "private": true
+}
