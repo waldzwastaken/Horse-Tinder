@@ -328,6 +328,7 @@ function cardHtml(h) {
   const mine = new Set((state.me.interests || []).map((s) => s.toLowerCase()));
   return `<article class="card" data-id="${h.id}" tabindex="0" aria-label="${esc(h.name)}, ${h.age}. Tap for details.">
     <div class="card-art ${h.photo ? 'has-photo' : ''}" style="background:linear-gradient(160deg,${shade(h.coat, 100)},${shade(h.coat, 30)})">
+      <span class="compat">🍀 <b>${h.compatibility}%</b> friend match</span>
       <div class="stamp stamp-like">FRIEND</div>
       <div class="stamp stamp-nope">NOPE</div>
       <div class="stamp stamp-super">SUPER NEIGH</div>
