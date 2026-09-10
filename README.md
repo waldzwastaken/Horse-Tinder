@@ -1,4 +1,4 @@
-# 🐴 Horse Tinder
+# 🐴 Horse Friends
 
 Find your herd. A friendship app for horses, aimed at ten-year-olds: Node's built-in HTTP server, an in-memory store, and a vanilla JavaScript frontend. The only dependency is the Anthropic SDK, and that is optional.
 
@@ -6,7 +6,7 @@ Find your herd. A friendship app for horses, aimed at ten-year-olds: Node's buil
 
 ```bash
 npm start
-# 🐴 Horse Tinder is trotting at http://localhost:3000
+# 🐴 Horse Friends is trotting at http://localhost:3000
 ```
 
 Requires Node 20 or newer. Without an API key the horses reply with canned lines and nothing needs installing.

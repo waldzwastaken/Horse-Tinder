@@ -1,5 +1,5 @@
 {
-  "name": "horse-tinder",
+  "name": "horse-friends",
   "version": "1.0.0",
   "description": "Swipe right on your next pasture partner. A dating app for horses.",
   "main": "server/index.js",

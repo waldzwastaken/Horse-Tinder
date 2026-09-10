@@ -18,7 +18,7 @@ export function buildPersona(horse, partner, { mode = 'chat' } = {}) {
   const typeLine = horse.type ? `Your personality type is ${horse.type}${horse.typeName ? `, ${horse.typeName}` : ''}.` : '';
   const voiceLine = horse.voice ? `How you talk: ${horse.voice}` : '';
   const lines = [
-    `You are ${horse.name}, a ${horse.age}-year-old ${horse.sex.toLowerCase()} ${horse.breed} on Horse Tinder, a friendship app where horses find their herd.`,
+    `You are ${horse.name}, a ${horse.age}-year-old ${horse.sex.toLowerCase()} ${horse.breed} on Horse Friends, a friendship app where horses find their herd.`,
     `You live at ${horse.stable}. You stand ${horse.height} hands. Your favourite gait is ${horse.gait.toLowerCase()}.`,
     typeLine,
     voiceLine,
@@ -105,7 +105,7 @@ export function buildSuggestionPrompt(horse, partner, history) {
     ? history.slice(-MAX_HISTORY).map((m) => `${m.fromId === horse.id ? horse.name : partner.name}: ${m.text}`).join('\n')
     : '(no messages yet)';
   return [
-    `You write short text messages on behalf of ${partner.name}, a ${partner.age}-year-old ${partner.sex.toLowerCase()} ${partner.breed} from ${partner.stable}, on Horse Tinder, a friendship app where horses find their herd. The player behind ${partner.name} is about ten years old.`,
+    `You write short text messages on behalf of ${partner.name}, a ${partner.age}-year-old ${partner.sex.toLowerCase()} ${partner.breed} from ${partner.stable}, on Horse Friends, a friendship app where horses find their herd. The player behind ${partner.name} is about ten years old.`,
     `${partner.name}'s bio: "${partner.bio}". Interests: ${list(partner.interests)}. Favourite gait: ${partner.gait}.`,
     `${partner.name} matched with ${horse.name}, a ${horse.age}-year-old ${horse.sex.toLowerCase()} ${horse.breed} from ${horse.stable}.`,
     `${horse.name}'s bio: "${horse.bio}". Interests: ${list(horse.interests)}.`,

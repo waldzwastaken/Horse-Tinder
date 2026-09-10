@@ -30,7 +30,7 @@ test('serves the frontend shell and static assets', async () => {
   const home = await call('GET', '/');
   assert.equal(home.status, 200);
   assert.match(home.headers.get('content-type'), /text\/html/);
-  assert.match(home.data, /Horse Tinder/);
+  assert.match(home.data, /Horse Friends/);
   const css = await call('GET', '/styles.css');
   assert.equal(css.status, 200);
   assert.match(css.headers.get('content-type'), /text\/css/);
@@ -42,7 +42,7 @@ test('serves the frontend shell and static assets', async () => {
 test('unknown non-API paths fall back to the SPA shell', async () => {
   const res = await call('GET', '/some/deep/link');
   assert.equal(res.status, 200);
-  assert.match(res.data, /Horse Tinder/);
+  assert.match(res.data, /Horse Friends/);
 });
 
 test('path traversal is blocked', async () => {

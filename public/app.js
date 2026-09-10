@@ -1,4 +1,4 @@
-/* Horse Tinder frontend. No framework, no build step. */
+/* Horse Friends frontend. No framework, no build step. */
 
 const ME_KEY = 'horse-tinder:me';
 const SWIPE_THRESHOLD = 110;
@@ -326,21 +326,27 @@ async function renderSwipe() {
 
 function cardHtml(h) {
   const mine = new Set((state.me.interests || []).map((s) => s.toLowerCase()));
-  return `<article class="card" data-id="${h.id}" tabindex="0" aria-label="${esc(h.name)}, ${h.age}">
+  return `<article class="card" data-id="${h.id}" tabindex="0" aria-label="${esc(h.name)}, ${h.age}. Tap for details.">
     <div class="card-art ${h.photo ? 'has-photo' : ''}" style="background:linear-gradient(160deg,${shade(h.coat, 100)},${shade(h.coat, 30)})">
-      <span class="compat">🍀 <b>${h.compatibility}%</b> friend match</span>
-      <span class="dist">📍 ${h.distance} mi</span>
       <div class="stamp stamp-like">FRIEND</div>
       <div class="stamp stamp-nope">NOPE</div>
       <div class="stamp stamp-super">SUPER NEIGH</div>
       ${h.photo ? `<img class="card-photo" src="${esc(h.photo)}" alt="${esc(h.name)}, a ${esc(h.breed)}" draggable="false">` : horseSvg(h.coat, h.mane, { blaze: hasBlaze(h) })}
+      <div class="card-name"><h2>${esc(h.name)}</h2></div>
     </div>
-    <div class="card-body">
-      <div class="card-title"><h2>${esc(h.name)}</h2><span class="age">${h.age}</span>${h.type ? `<span class="type" title="${esc(h.typeName || '')}">${esc(h.type)}</span>` : ''}<span class="sex">${esc(h.sex)}</span></div>
-      <div class="card-meta">${esc(h.breed)} · ${h.height} hh · ${esc(h.stable)}</div>
-      ${h.skill ? `<div class="card-skill"><b>${esc(h.typeName || 'Skill')}</b> · ${esc(h.skill.name)}: ${esc(h.skill.tagline.charAt(0).toLowerCase() + h.skill.tagline.slice(1))}</div>` : ''}
-      <p class="card-bio">${esc(h.bio)}</p>
-      <div class="chips">${(h.interests || []).map((i) => `<span class="chip ${mine.has(i.toLowerCase()) ? 'shared' : ''}">${esc(i)}</span>`).join('')}</div>
+    <div class="card-sheet" aria-label="About ${esc(h.name)}">
+      <button class="sheet-handle" type="button" aria-label="Close details"><span></span></button>
+      <div class="sheet-body">
+        <div class="card-title"><h2>${esc(h.name)}</h2><span class="age">${h.age}</span>${h.type ? `<span class="type" title="${esc(h.typeName || '')}">${esc(h.type)}</span>` : ''}<span class="sex">${esc(h.sex)}</span></div>
+        <div class="card-meta">${esc(h.breed)} · ${h.height} hh · ${esc(h.stable)}</div>
+        <div class="sheet-stats"><span class="compat">🍀 <b>${h.compatibility}%</b> friend match</span><span class="dist">📍 ${h.distance} mi away</span></div>
+        ${h.skill ? `<div class="card-skill"><b>${esc(h.typeName || 'Skill')}</b> · ${esc(h.skill.name)}: ${esc(h.skill.tagline.charAt(0).toLowerCase() + h.skill.tagline.slice(1))}${h.voice ? `<span class="voice">${esc(h.voice)}</span>` : ''}</div>` : ''}
+        <p class="card-bio">${esc(h.bio)}</p>
+        <div class="sheet-row"><span class="k">Favourite gait</span><div>${esc(h.gait)}</div></div>
+        <div class="sheet-row"><span class="k">Looking for</span><div>${esc(h.lookingFor)}</div></div>
+        <div class="chips">${(h.interests || []).map((i) => `<span class="chip ${mine.has(i.toLowerCase()) ? 'shared' : ''}">${esc(i)}</span>`).join('')}</div>
+        ${creditHtml(h)}
+      </div>
     </div>
   </article>`;
 }
@@ -366,7 +372,7 @@ function paintDeck() {
   $('#act-nope').addEventListener('click', () => swipeTop('nope'));
   $('#act-like').addEventListener('click', () => swipeTop('like'));
   $('#act-super').addEventListener('click', () => swipeTop('super'));
-  $('#act-info').addEventListener('click', () => showDetails(state.deck[0]));
+  $('#act-info').addEventListener('click', () => toggleSheet());
   $('#act-rewind').addEventListener('click', rewind);
   attachDrag(deck.firstElementChild);
 }
@@ -401,7 +407,7 @@ function attachDrag(card) {
     }
   };
   card.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || e.target.closest('.card-sheet')) return;
     dragging = true;
     moved = false;
     startX = e.clientX;
@@ -414,7 +420,11 @@ function attachDrag(card) {
   card.addEventListener('pointermove', onMove);
   card.addEventListener('pointerup', onUp);
   card.addEventListener('pointercancel', onUp);
-  card.addEventListener('click', () => { if (!moved) showDetails(state.deck[0]); });
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.sheet-handle')) { toggleSheet(false); return; }
+    if (e.target.closest('.card-sheet')) return;
+    if (!moved) toggleSheet();
+  });
 }
 
 async function swipeTop(direction) {
@@ -466,25 +476,12 @@ function rewind() {
   toast(`Brought ${last.horse.name} back for another look.`);
 }
 
-function showDetails(h) {
-  if (!h) return;
-  const mine = new Set((state.me.interests || []).map((s) => s.toLowerCase()));
-  openModal(`
-    <div class="pair">${avatar(h)}</div>
-    ${creditHtml(h)}
-    <div class="detail">
-      <h3>${esc(h.name)}, ${h.age}</h3>
-      ${h.type ? `<div><span class="k">Personality</span><div><span class="type">${esc(h.type)}</span> ${esc(h.typeName || '')}${h.voice ? ` · ${esc(h.voice)}` : ''}</div></div>` : ''}
-      ${h.skill ? `<div class="skill-box"><span class="k">Skill · ${esc(h.skill.name)}</span><div>${esc(h.skill.tagline)}. Become friends, then tap <b>Help</b> in chat.</div></div>` : ''}
-      <div><span class="k">Breed</span><div>${esc(h.breed)} · ${esc(h.sex)} · ${h.height} hh</div></div>
-      <div><span class="k">Stable</span><div>${esc(h.stable)} · ${h.distance} miles away</div></div>
-      <div><span class="k">Favourite gait</span><div>${esc(h.gait)}</div></div>
-      <div><span class="k">Looking for</span><div>${esc(h.lookingFor)}</div></div>
-      <div><span class="k">About</span><div>${esc(h.bio)}</div></div>
-      <div><span class="k">Interests</span><div class="chips">${(h.interests || []).map((i) => `<span class="chip ${mine.has(i.toLowerCase()) ? 'shared' : ''}">${esc(i)}</span>`).join('')}</div></div>
-    </div>
-    <div style="margin-top:16px"><button class="btn btn-block" id="close-detail">Close</button></div>`);
-  $('#close-detail').addEventListener('click', closeModal);
+function toggleSheet(open) {
+  const card = $('#deck .card');
+  if (!card) return;
+  const next = open === undefined ? !card.classList.contains('open') : Boolean(open);
+  card.classList.toggle('open', next);
+  if (next) $('.card-sheet', card).scrollTop = 0;
 }
 
 function showMatch(horse, match) {
@@ -740,7 +737,8 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowLeft') swipeTop('nope');
   else if (e.key === 'ArrowUp') { e.preventDefault(); swipeTop('super'); }
   else if (e.key.toLowerCase() === 'z') rewind();
-  else if (e.key.toLowerCase() === 'i') showDetails(state.deck[0]);
+  else if (e.key.toLowerCase() === 'i') toggleSheet();
+  else if (e.key === 'Escape') toggleSheet(false);
 });
 
 boot().catch((err) => {

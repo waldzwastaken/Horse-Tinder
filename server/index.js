@@ -12,7 +12,7 @@ const store = new Store({ file: file === '' ? null : file, replier, suggester, p
 const server = createApp({ store });
 
 server.listen(port, () => {
-  console.log(`🐴 Horse Tinder is trotting at http://localhost:${port}`);
+  console.log(`🐴 Horse Friends is trotting at http://localhost:${port}`);
   if (store.file) console.log(`   Persisting to ${store.file} (set DATA_FILE= to disable)`);
   console.log(replier
     ? '   AI replies: on (horses answer and reply suggestions come through Claude)'
