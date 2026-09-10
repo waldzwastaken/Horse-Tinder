@@ -116,24 +116,25 @@ test('full swipe, match and chat flow over HTTP', async () => {
   const sent = await call('POST', `/api/matches/${matchId}/messages`, { fromId: me.id, text: 'Neigh!' });
   assert.equal(sent.status, 201);
   assert.equal(sent.data.message.text, 'Neigh!');
-  assert.equal(sent.data.replies.length, 1);
+  assert.equal(sent.data.replies.length, 2, 'a reply plus the one-time offer of help');
+  assert.equal(sent.data.replies[1].kind, 'offer');
+  assert.equal(sent.data.replies[1].text, deck.data[0].skill.offer);
 
-  const help = await call('POST', `/api/matches/${matchId}/messages`, { fromId: me.id, text: 'Help me plan a wedding', mode: 'help' });
+  const help = await call('POST', `/api/matches/${matchId}/messages`, { fromId: me.id, text: 'Help me plan a wedding' });
   assert.equal(help.status, 201);
   assert.equal(help.data.message.kind, 'help');
   assert.equal(help.data.replies[0].kind, 'help');
   assert.equal(help.data.replies[0].text, deck.data[0].skill.fallback);
-  assert.equal((await call('POST', `/api/matches/${matchId}/messages`, { fromId: me.id, text: 'x', mode: 'nope' })).status, 400);
 
   const followUps = await call('GET', `/api/matches/${matchId}/suggestions?as=${me.id}`);
   assert.equal(followUps.data.suggestions.length, 3);
   assert.notDeepEqual(followUps.data.suggestions, openers.data.suggestions, 'suggestions change with the conversation');
 
   const after1 = await call('GET', `/api/horses/${me.id}/matches`);
-  assert.equal(after1.data[0].unread, 2, 'chat reply plus help reply');
+  assert.equal(after1.data[0].unread, 3, 'chat reply, offer, and help reply');
 
   const msgs = await call('GET', `/api/matches/${matchId}/messages?as=${me.id}`);
-  assert.equal(msgs.data.length, 4);
+  assert.equal(msgs.data.length, 5);
   const after2 = await call('GET', `/api/horses/${me.id}/matches`);
   assert.equal(after2.data[0].unread, 0);
 

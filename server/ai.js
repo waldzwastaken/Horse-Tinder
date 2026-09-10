@@ -5,15 +5,18 @@
  * built-in Claude access.
  */
 
+import { HELP_TAG } from './suggest.js';
+
 export const DEFAULT_MODEL = 'claude-opus-5';
 const MAX_HISTORY = 20;
 const MAX_REPLY_CHARS = 700;
 
 /**
- * System prompt for a horse. `mode` is 'chat' (friendly small talk) or 'help'
- * (the horse applies its skill to a real request from the partner).
+ * System prompt for a horse. There is no separate help switch: the horse chats
+ * as a friend, and when the partner asks for help it applies its skill and marks
+ * the reply with HELP_TAG so the app can style it.
  */
-export function buildPersona(horse, partner, { mode = 'chat' } = {}) {
+export function buildPersona(horse, partner) {
   const list = (arr) => (arr && arr.length ? arr.join(', ') : 'nothing in particular');
   const typeLine = horse.type ? `Your personality type is ${horse.type}${horse.typeName ? `, ${horse.typeName}` : ''}.` : '';
   const voiceLine = horse.voice ? `How you talk: ${horse.voice}` : '';
@@ -28,30 +31,25 @@ export function buildPersona(horse, partner, { mode = 'chat' } = {}) {
     `You just became friends with ${partner.name}, a ${partner.age}-year-old ${partner.sex.toLowerCase()} ${partner.breed} from ${partner.stable}.`,
     `${partner.name}'s bio: "${partner.bio}". Interests: ${list(partner.interests)}.`,
     '',
-  ];
-  lines.push(
     'The person you are talking to is about ten years old. Use simple words and short sentences. Be kind, funny and encouraging.',
     'Everything you say must be suitable for a ten-year-old: no romance or dating talk, nothing scary, rude or mean. Never ask for personal details such as their address, school, last name or passwords.',
     'If they seem upset, unsafe or in trouble, gently tell them to talk to a trusted grown-up.',
     '',
-  );
-  if (mode === 'help' && horse.skill) {
+    'You are chatting with them in the app as a new friend. Stay fully in character as this horse: think and talk like a horse would, with horse concerns (hay, pasture, farriers, plastic bags, the water trough).',
+    'Let your personality type show in how you respond. Be warm, playful and friendly, like a pen pal. Reference your own profile and theirs where it fits.',
+    'Reply with one or two short sentences, like a text message. No quotation marks around your reply, no narration, no emoji lists.',
+  ];
+  if (horse.skill) {
     lines.push(
-      `${partner.name} has asked you for help, and this is your skill: ${horse.skill.name}. ${horse.skill.tagline}.`,
-      horse.skill.prompt,
-      'Give real, usable help for their actual situation. Stay in character as this horse and keep your voice, but put the help first.',
-      'Reply in at most four short sentences or a short list. No quotation marks around your reply, no narration.',
-    );
-  } else {
-    lines.push(
-      'You are chatting with them in the app as a new friend. Stay fully in character as this horse: think and talk like a horse would, with horse concerns (hay, pasture, farriers, plastic bags, the water trough).',
-      'Let your personality type show in how you respond. Be warm, playful and friendly, like a pen pal. Reference your own profile and theirs where it fits.',
-      horse.skill ? `If they seem to need real help with something, you may mention that ${horse.skill.name.toLowerCase()} is your thing and invite them to ask.` : '',
-      'Reply with one or two short sentences, like a text message. No quotation marks around your reply, no narration, no emoji lists.',
+      '',
+      `You are also good at one thing: ${horse.skill.name}. ${horse.skill.tagline}. ${horse.skill.prompt}`,
+      `When ${partner.name} asks for help, has a real question, or is clearly stuck, worried or unsure about something, help properly instead of chatting: put the help first, stay in your voice, and use at most four short sentences or a short list.`,
+      `Start a helping reply with the exact tag ${HELP_TAG} and nothing before it. Never use the tag on ordinary chat.`,
+      'They already know what you are good at, so do not keep bringing it up.',
     );
   }
-  lines.push('Never mention being an AI, a language model, or a simulation. If asked, you are simply a horse.');
-  return lines.filter((l) => l !== '' || true).filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n');
+  lines.push('', 'Never mention being an AI, a language model, or a simulation. If asked, you are simply a horse.');
+  return lines.filter((l, i, a) => !(l === '' && a[i - 1] === '')).join('\n');
 }
 
 /**
@@ -159,15 +157,15 @@ export function createClaudeReplier({
     return clientPromise;
   }
 
-  return async function reply({ horse, partner, history, mode = 'chat' }) {
+  return async function reply({ horse, partner, history }) {
     const messages = buildTurns(history, horse.id);
     if (!messages.length) return null;
     try {
       const api = await getClient();
       const response = await api.beta.messages.create({
         model,
-        max_tokens: mode === 'help' ? 600 : 300,
-        system: buildPersona(horse, partner, { mode }),
+        max_tokens: 600,
+        system: buildPersona(horse, partner),
         messages,
         output_config: { effort: 'low' },
         betas: ['server-side-fallback-2026-07-01'],

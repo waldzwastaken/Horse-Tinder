@@ -553,9 +553,10 @@ async function renderMatches() {
 
 function msgHtml(m) {
   const mine = m.fromId === state.me.id;
-  const help = m.kind === 'help';
   const skill = state.chatMatch?.horse?.skill;
-  const tag = help ? `<span class="msg-tag">${mine ? 'Asked for help' : `💡 ${esc(skill?.name || 'Help')}`}</span>` : '';
+  const help = m.kind === 'help' || m.kind === 'offer';
+  const tag = m.kind === 'help' ? `<span class="msg-tag">${mine ? 'Asked for help' : `💡 ${esc(skill?.name || 'Help')}`}</span>`
+    : m.kind === 'offer' ? `<span class="msg-tag">💡 ${esc(skill?.name || 'Something I can help with')}</span>` : '';
   return `<div class="msg ${mine ? 'me' : 'them'} ${help ? 'help' : ''}">${tag}${esc(m.text)}</div>`;
 }
 
@@ -574,7 +575,7 @@ async function openChat(match) {
     <div class="messages" id="messages"><div class="msg-sys">You and ${esc(h.name)} are friends now. Say something nice.</div></div>
     ${ended ? `<div class="msg-sys ended-note">${esc(h.name)} has gone back to the herd. You can still read your chat.</div>` : `
     <div class="quick-replies" id="quick" aria-label="Suggested replies"><span class="quick-hint">Finding the words…</span></div>
-    <form class="composer" id="composer">${h.skill ? `<button type="button" class="help-toggle" id="help-toggle" aria-pressed="false" title="${esc(h.skill.name)}: ${esc(h.skill.tagline)}">💡<span>Help</span></button>` : ''}<input id="chat-input" placeholder="Message ${esc(h.name)}" maxlength="500" autocomplete="off"><button type="submit">Send</button></form>`}
+    <form class="composer" id="composer"><input id="chat-input" placeholder="Message ${esc(h.name)}" maxlength="500" autocomplete="off"><button type="submit">Send</button></form>`}
   </div>`;
   const list = $('#messages');
   const input = $('#chat-input');
@@ -592,15 +593,6 @@ async function openChat(match) {
         setTab('matches');
       } catch (err) { toast(err.message); }
     });
-  });
-  let helpMode = false;
-  const helpToggle = $('#help-toggle');
-  helpToggle?.addEventListener('click', () => {
-    helpMode = !helpMode;
-    helpToggle.setAttribute('aria-pressed', String(helpMode));
-    helpToggle.classList.toggle('on', helpMode);
-    input.placeholder = helpMode ? `Ask ${h.name} for help with…` : `Message ${h.name}`;
-    if (helpMode) toast(`${h.name} · ${h.skill.name}: ${h.skill.tagline}`, 2600);
   });
   const quick = $('#quick');
   quick?.addEventListener('click', (e) => {
@@ -638,8 +630,8 @@ async function openChat(match) {
     input.value = '';
     // Show the message and a typing indicator right away: an AI reply can take a few seconds.
     const pending = document.createElement('div');
-    pending.className = `msg me pending ${helpMode ? 'help' : ''}`;
-    pending.innerHTML = `${helpMode ? '<span class="msg-tag">Asked for help</span>' : ''}${esc(text)}`;
+    pending.className = 'msg me pending';
+    pending.textContent = text;
     list.appendChild(pending);
     const typing = document.createElement('div');
     typing.className = 'typing';
@@ -650,8 +642,10 @@ async function openChat(match) {
     suggestToken += 1;
     const startedAt = Date.now();
     try {
-      const { replies, aiError } = await api(`/api/matches/${match.id}/messages`, { method: 'POST', body: { fromId: state.me.id, text, mode: helpMode ? 'help' : 'chat' } });
+      const { message, replies, aiError } = await api(`/api/matches/${match.id}/messages`, { method: 'POST', body: { fromId: state.me.id, text } });
       pending.classList.remove('pending');
+      // The horse decides whether that was a request for help; label the sent bubble to match.
+      if (message?.kind === 'help') { pending.classList.add('help'); pending.insertAdjacentHTML('afterbegin', '<span class="msg-tag">Asked for help</span>'); }
       const fellBack = state.aiReady && replies.some((r) => r.source === 'canned');
       const wait = Math.max(0, 900 - (Date.now() - startedAt));
       setTimeout(() => {

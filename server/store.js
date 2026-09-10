@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { SEED_HORSES, HORSE_REPLIES, HORSE_FAREWELLS, TYPE_NAMES } from './horses.js';
-import { suggestReplies, cannedReply } from './suggest.js';
+import { suggestReplies, cannedReply, looksLikeHelpRequest, splitHelpTag, MAX_SUGGESTIONS } from './suggest.js';
 
 const VALID_SEX = ['Mare', 'Stallion', 'Gelding'];
 const VALID_GAIT = ['Walk', 'Trot', 'Canter', 'Lope', 'Gallop'];
@@ -368,17 +368,19 @@ export class Store {
 
   /**
    * Send a message. If the other horse is a seed horse it replies: through the
-   * configured AI replier when one is set, otherwise with a canned line.
-   * `mode` is 'chat' or 'help'; in help mode the horse applies its skill.
+   * configured AI replier when one is set, otherwise with a canned line. There
+   * is no help switch: the horse reads the message and helps when asked, and
+   * the reply (and the message it answers) get `kind: 'help'` so the app can
+   * style them. After the first exchange the horse also offers its skill once.
    */
-  async sendMessage(matchId, fromId, text, mode = 'chat') {
-    if (!['chat', 'help'].includes(mode)) throw new ValidationError('Mode must be chat or help');
+  async sendMessage(matchId, fromId, text) {
     const match = this.getMatch(matchId);
     if (!match.horseIds.includes(fromId)) throw new ValidationError('Not your match');
     if (!this.isActive(match)) throw new ValidationError('This horse has gone back to the herd');
     const body = clean(text, 500);
     if (!body) throw new ValidationError('Message cannot be empty');
-    const msg = { id: this.nextId('msg'), matchId, fromId, text: body, at: this.now(), read: false, kind: mode };
+    const wantsHelp = looksLikeHelpRequest(body);
+    const msg = { id: this.nextId('msg'), matchId, fromId, text: body, at: this.now(), read: false, kind: wantsHelp ? 'help' : 'chat' };
     this.state.messages.push(msg);
     this.persist();
 
@@ -390,15 +392,20 @@ export class Store {
       const history = this.state.messages.filter((m) => m.matchId === matchId);
       let replyText = null;
       let source = 'canned';
+      let help = wantsHelp;
       if (this.replier) {
         try {
-          replyText = await this.replier({ horse: other, partner: me, history, mode });
-          if (replyText) source = 'ai';
+          const raw = await this.replier({ horse: other, partner: me, history });
+          if (raw) {
+            const split = splitHelpTag(raw);
+            replyText = split.text || null;
+            if (replyText) { source = 'ai'; help = split.help; }
+          }
         } catch {
           replyText = null;
         }
       }
-      if (!replyText && mode === 'help' && other.skill?.fallback) {
+      if (!replyText && wantsHelp && other.skill?.fallback) {
         replyText = other.skill.fallback;
       }
       if (!replyText) {
@@ -410,6 +417,7 @@ export class Store {
         const idx = (hashString(`${matchId}:${count}`) + count) % HORSE_REPLIES.length;
         replyText = HORSE_REPLIES[idx];
       }
+      msg.kind = help ? 'help' : 'chat';
       const reply = {
         id: this.nextId('msg'),
         matchId,
@@ -418,10 +426,17 @@ export class Store {
         at: this.now(),
         read: false,
         source,
-        kind: mode,
+        kind: msg.kind,
       };
       this.state.messages.push(reply);
       replies.push(reply);
+      // Once, after the first exchange, the horse says what it is good at.
+      const firstExchange = history.filter((m) => m.fromId === fromId).length === 1;
+      if (other.skill?.offer && firstExchange && !history.some((m) => m.kind === 'offer')) {
+        const offer = { id: this.nextId('msg'), matchId, fromId: otherId, text: other.skill.offer, at: this.now(), read: false, source: 'canned', kind: 'offer' };
+        this.state.messages.push(offer);
+        replies.push(offer);
+      }
     }
     this.persist();
     return { message: msg, replies };
@@ -446,6 +461,13 @@ export class Store {
       }
     }
     if (!suggestions?.length) suggestions = suggestReplies(other, me, history);
+    // One pill is always a way to ask this horse for help with its skill.
+    const ask = other.skill?.ask;
+    if (ask) {
+      const rest = suggestions.filter((t) => t !== ask).slice(0, MAX_SUGGESTIONS - 1);
+      const last = history[history.length - 1];
+      suggestions = last?.kind === 'offer' && last.fromId === other.id ? [ask, ...rest] : [...rest, ask];
+    }
     return { suggestions, source };
   }
 

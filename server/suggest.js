@@ -17,6 +17,27 @@ const RULES = [
   [/\?/, ['Good question. You first.', 'Yes. Obviously yes.']],
 ];
 
+export const MAX_SUGGESTIONS = 3;
+
+/** The model starts a reply with this when it is giving real help rather than chatting. */
+export const HELP_TAG = '[help]';
+
+/**
+ * Does this message look like a request for help rather than small talk?
+ * Used to pick the scripted skill answer when no AI is available, and to style the message.
+ */
+const HELP_PATTERN = /\b(help|stuck|homework|how (do|can|could|should) (i|we|you)|how does|how did|explain|teach me|tell me how|what should i|should i|advice|tips?|i can'?t|i cannot|i don'?t (know|get|understand)|i need|nervous|scared|worried|sad|upset|angry|my friend|my brother|my sister|a joke|an idea|ideas|a story|a poem|a card|a plan|decide|choose|bored)\b/i;
+export function looksLikeHelpRequest(text) {
+  return HELP_PATTERN.test(String(text || ''));
+}
+
+/** Strip the help tag from a model reply, reporting whether it was there. */
+export function splitHelpTag(text) {
+  const raw = String(text ?? '').trim();
+  const m = raw.match(/^\[\s*help\s*\]\s*:?\s*/i);
+  return m ? { text: raw.slice(m[0].length).trim(), help: true } : { text: raw, help: false };
+}
+
 const GENERIC = ['Ha! Same here.', 'Tell me more.', 'Meet at the fence later?', 'You are funny, I can tell.', 'Okay, go on.'];
 
 function sharedInterests(horse, partner) {
@@ -52,6 +73,14 @@ export function suggestReplies(horse, partner, history = []) {
       `Be honest, ${horse.name}: apples or carrots?`,
       `Fancy a ${(horse.gait || 'trot').toLowerCase()} round the far field sometime?`,
       'Your bio made me snort. In a good way.',
+    ], 3);
+  }
+
+  if (last.fromId === horse.id && last.kind === 'offer') {
+    return unique([
+      horse.skill?.ask,
+      'Not right now, but tell me about you!',
+      'Maybe later! What do you like doing?',
     ], 3);
   }
 

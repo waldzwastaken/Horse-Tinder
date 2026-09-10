@@ -30,7 +30,7 @@ The app is framed around friendship, not dating: you meet horses, become friends
 ## What it does
 
 - **Sixteen personalities, sixteen skills.** Every seed horse is built around one personality type, from Biscuit the ESTP daredevil to Sir Reginald the INTJ strategist. The type shapes the bio, the voice in chat, and a skill the horse can help you with: Big Red splits a big project into steps, Muffin decides when you can't, Willow gets you brave for the tryout. Cards show the type and skill.
-- **Help mode.** In any chat, tap the Help toggle and ask for real help. With Claude on, the horse applies its skill prompt to your actual situation, still in character. Without it, you get the horse's scripted method for its skill.
+- **Just ask.** There is no help button. After your first exchange each horse mentions what it is good at, one of the suggested replies is always a way to ask, and when you do ask the horse helps properly, still in character. With Claude on, the horse reads your message and decides whether you want a chat or real help; without it, a keyword rule picks the horse's scripted method for its skill.
 - **Create your horse.** Name, breed, colours, gait, interests, bio. Or hit "Try a demo horse" to get going instantly.
 - **Meet.** Drag cards left or right, flick up for a Super Neigh, or use the buttons. Arrow keys work too, plus `Z` to rewind and `I` for details.
 - **Make friends.** Each card shows a friend-match score based on shared interests, gait and distance. Seed horses say yes deterministically when the score is high enough; a Super Neigh always lands.
@@ -64,7 +64,7 @@ All responses are JSON.
 | `GET` | `/api/horses/:id/stats` | Swiped, liked, matches, remaining |
 | `GET` | `/api/matches/:id/messages?as=:horseId` | Messages; passing `as` marks them read |
 | `GET` | `/api/matches/:id/suggestions?as=:horseId` | Up to three replies `as` could send next, with `source: "ai"`, `"rules"` or `"none"` |
-| `POST` | `/api/matches/:id/messages` | Body `{ fromId, text, mode? }` with `mode` `"chat"` (default) or `"help"`. Returns `{ message, replies }`; each reply carries `source: "ai"` or `"canned"` and `kind` |
+| `POST` | `/api/matches/:id/messages` | Body `{ fromId, text }`. Returns `{ message, replies }`; each message carries `kind` (`"chat"`, `"help"` or `"offer"`) and each reply `source: "ai"` or `"canned"` |
 | `DELETE` | `/api/matches/:id?as=:horseId` | Unmatch |
 
 ## Tests

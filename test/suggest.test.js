@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { suggestReplies, cannedReply } from '../server/suggest.js';
+import { suggestReplies, cannedReply, looksLikeHelpRequest, splitHelpTag } from '../server/suggest.js';
 import { buildSuggestionPrompt, parseSuggestions, createClaudeSuggester, SUGGESTION_SCHEMA } from '../server/ai.js';
 import { Store } from '../server/store.js';
 import { SEED_HORSES } from '../server/horses.js';
@@ -89,11 +89,13 @@ test('store serves AI suggestions, falls back to rules, and none once ended', as
   const store = new Store({ now, suggester });
   const me = store.createHorse({ name: 'Tester', age: 6, sex: 'Mare', interests: ['Trail rides', 'Apples'], gait: 'Trot' });
   const { match } = store.swipe(me.id, 'h1', 'super');
-  assert.deepEqual(await store.suggestions(match.id, me.id), { suggestions: ['AI one', 'AI two', 'AI three'], source: 'ai' });
+  const ask = SEED_HORSES.find((h) => h.id === 'h1').skill.ask;
+  assert.deepEqual(await store.suggestions(match.id, me.id), { suggestions: ['AI one', 'AI two', ask], source: 'ai' }, 'the last pill always asks for help');
   fail = true;
   const rules = await store.suggestions(match.id, me.id);
   assert.equal(rules.source, 'rules');
   assert.equal(rules.suggestions.length, 3);
+  assert.equal(rules.suggestions[2], ask);
   await assert.rejects(() => store.suggestions(match.id, 'h2'), /Not your match/);
   const plain = new Store({ now });
   const me2 = plain.createHorse({ name: 'Plain', age: 6, sex: 'Mare', interests: ['Carrots'], gait: 'Trot' });
@@ -102,6 +104,8 @@ test('store serves AI suggestions, falls back to rules, and none once ended', as
   const after = await plain.suggestions(m2.id, me2.id);
   assert.equal(after.source, 'rules');
   assert.equal(after.suggestions.length, 3);
+  assert.equal(after.suggestions[0], ask, 'right after the offer, the ask comes first');
+  assert.match(after.suggestions[1], /Not right now/);
   // Ghost the match and confirm suggestions dry up.
   const fillers = Array.from({ length: 8 }, (_, i) => plain.createHorse({ name: `F${i}`, age: 5, sex: 'Mare' }));
   for (const f of fillers) plain.swipe(me2.id, f.id, 'nope');
@@ -135,4 +139,17 @@ test('store uses context-aware canned replies before the general pool', async ()
   assert.equal(replies[0].source, 'canned');
   const { replies: generic } = await store.sendMessage(match.id, me.id, 'xyzzy');
   assert.ok(generic[0].text.length > 0);
+});
+
+test('help requests are spotted by keyword, and the help tag is split from replies', () => {
+  assert.ok(looksLikeHelpRequest('Can you help me with my homework?'));
+  assert.ok(looksLikeHelpRequest('I am stuck on level 4'));
+  assert.ok(looksLikeHelpRequest("I don't understand fractions"));
+  assert.ok(looksLikeHelpRequest('how does a volcano work'));
+  assert.ok(!looksLikeHelpRequest('apples or carrots?'));
+  assert.ok(!looksLikeHelpRequest('Neigh! Nice mane.'));
+  assert.deepEqual(splitHelpTag('[help] Do the first sock.'), { text: 'Do the first sock.', help: true });
+  assert.deepEqual(splitHelpTag('[HELP]: Two steps.'), { text: 'Two steps.', help: true });
+  assert.deepEqual(splitHelpTag('  Just hay talk. '), { text: 'Just hay talk.', help: false });
+  assert.deepEqual(splitHelpTag(null), { text: '', help: false });
 });
