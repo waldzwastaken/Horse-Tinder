@@ -351,8 +351,10 @@ p { margin: 0; }
 .composer input { flex: 1; border: 1.5px solid var(--line); border-radius: 999px; padding: 11px 16px; background: #fff; outline: none; }
 .composer input:focus { border-color: var(--accent-2); }
 .composer button { border: 0; border-radius: 999px; padding: 0 18px; background: var(--accent); color: #fff; font-weight: 900; }
-.quick-replies { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 2px; }
-.quick-replies button { flex: none; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+.quick-replies { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 2px; min-height: 42px; align-items: center; }
+.quick-replies button { flex: none; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 700; color: var(--ink-2); animation: pop .18s ease-out; }
+.quick-replies button:hover { border-color: var(--accent-2); color: var(--accent); }
+.quick-hint { flex: none; font-size: 12px; color: var(--muted); font-weight: 700; padding: 6px 4px; animation: blink 1.4s infinite; }
 
 /* Profile */
 .profile { overflow-y: auto; display: grid; gap: 14px; padding-bottom: 8px; }

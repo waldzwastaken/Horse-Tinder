@@ -107,10 +107,20 @@ test('full swipe, match and chat flow over HTTP', async () => {
   assert.equal(matches.data[0].lastMessage, null);
   assert.equal(matches.data[0].status, 'active');
 
+  const openers = await call('GET', `/api/matches/${matchId}/suggestions?as=${me.id}`);
+  assert.equal(openers.status, 200);
+  assert.equal(openers.data.source, 'rules');
+  assert.equal(openers.data.suggestions.length, 3);
+  assert.equal((await call('GET', `/api/matches/${matchId}/suggestions?as=h9`)).status, 400);
+
   const sent = await call('POST', `/api/matches/${matchId}/messages`, { fromId: me.id, text: 'Neigh!' });
   assert.equal(sent.status, 201);
   assert.equal(sent.data.message.text, 'Neigh!');
   assert.equal(sent.data.replies.length, 1);
+
+  const followUps = await call('GET', `/api/matches/${matchId}/suggestions?as=${me.id}`);
+  assert.equal(followUps.data.suggestions.length, 3);
+  assert.notDeepEqual(followUps.data.suggestions, openers.data.suggestions, 'suggestions change with the conversation');
 
   const after1 = await call('GET', `/api/horses/${me.id}/matches`);
   assert.equal(after1.data[0].unread, 1);

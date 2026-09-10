@@ -30,6 +30,7 @@ ANTHROPIC_API_KEY=sk-ant-... npm start
 - **Match.** Each card shows a compatibility score based on shared interests, gait and distance. Seed horses like you back deterministically when compatibility is high enough; a Super Neigh always lands.
 - **Chat.** Matched horses reply to your messages. Unread badges, read receipts, quick replies, and an unmatch button for when it just isn't working out.
 - **AI replies.** With an API key set, every seed horse answers in character through Claude, using its profile and yours as the persona. Replies are one or two sentences, and if the API is unavailable or declines, the horse falls back to a canned line so the chat never stalls.
+- **Suggested replies.** The pills above the message box are real candidate replies to the latest message, not fixed phrases. With an API key they are written by Claude in your horse's voice (one playful, one curious, one bold) as structured JSON. Without one, rules read the horse's last message and your shared interests: openers mention what you have in common, and a horse asking "apples or peppermints?" gets pills that answer it. Tap a pill to put it in the box, edit if you like, and send.
 - **Stable reputation.** A score from 0 to 100 shown on your profile. Sending messages and holding real conversations (four or more messages to one horse) raise it. Being ghosted lowers it. The score shifts how likely horses are to like you back by up to ten points either way.
 - **Ghosting has consequences.** If a horse is waiting on your reply and you keep swiping (six swipes), or you never say hello after matching (twelve swipes), it sends a sad farewell and the match ends. Ended matches sit in a "Walked away" section and can be read but not replied to.
 - **Profile.** Edit your horse and see your stats.
@@ -52,6 +53,7 @@ All responses are JSON.
 | `GET` | `/api/horses/:id/matches` | Matches with the other horse, last message and unread count |
 | `GET` | `/api/horses/:id/stats` | Swiped, liked, matches, remaining |
 | `GET` | `/api/matches/:id/messages?as=:horseId` | Messages; passing `as` marks them read |
+| `GET` | `/api/matches/:id/suggestions?as=:horseId` | Up to three replies `as` could send next, with `source: "ai"`, `"rules"` or `"none"` |
 | `POST` | `/api/matches/:id/messages` | Body `{ fromId, text }`. Returns `{ message, replies }`; each reply carries `source: "ai"` or `"canned"` |
 | `DELETE` | `/api/matches/:id?as=:horseId` | Unmatch |
 
@@ -61,7 +63,7 @@ All responses are JSON.
 npm test
 ```
 
-Covers the matching logic, reputation and ghosting rules, the AI replier (with a fake client, no key needed), validation, persistence, and the HTTP API end to end.
+Covers the matching logic, reputation and ghosting rules, the AI replier and suggester (with a fake client, no key needed), the rule-based suggestions, validation, persistence, and the HTTP API end to end.
 
 ## Layout
 
@@ -70,10 +72,11 @@ server/
   index.js   entry point (reads PORT and DATA_FILE)
   app.js     HTTP router and static file serving
   store.js   horses, swipes, matches, messages, compatibility, reputation
-  ai.js      Claude persona replies (optional)
+  ai.js      Claude persona replies and reply suggestions (optional)
+  suggest.js rule-based reply suggestions
   horses.js  seed profiles, canned chat replies and farewells
 public/
   index.html, styles.css, app.js   the frontend
 test/
-  store.test.js, api.test.js, ai.test.js
+  store.test.js, api.test.js, ai.test.js, suggest.test.js
 ```

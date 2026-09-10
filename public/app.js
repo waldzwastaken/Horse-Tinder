@@ -5,7 +5,6 @@ const SWIPE_THRESHOLD = 110;
 const SUPER_THRESHOLD = 120;
 const COATS = ['#a0522d', '#b5651d', '#6b4423', '#3b2314', '#1b1b1f', '#7a7a80', '#d8d8dc', '#e8d9c0', '#d4a24c', '#d9b45a', '#c1440e', '#e3c5a0'];
 const MANES = ['#3b2412', '#1e1208', '#0a0a0c', '#5a2d10', '#8b5a2b', '#3a3a3a', '#d0d0d4', '#f0f0f2', '#fff6e0', '#b8902e'];
-const QUICK_REPLIES = ['Neigh 👋', 'Hay there!', 'Wanna share a trough?', 'Race you to the fence 🏁', 'Carrots or apples?'];
 
 const state = {
   me: null,
@@ -559,7 +558,7 @@ async function openChat(match) {
     </div>
     <div class="messages" id="messages"><div class="msg-sys">You matched with ${esc(h.name)}. Say something nice.</div></div>
     ${ended ? `<div class="msg-sys ended-note">${esc(h.name)} has moved on. You can still read the conversation.</div>` : `
-    <div class="quick-replies" id="quick">${QUICK_REPLIES.map((q) => `<button type="button">${esc(q)}</button>`).join('')}</div>
+    <div class="quick-replies" id="quick" aria-label="Suggested replies"><span class="quick-hint">Finding the words…</span></div>
     <form class="composer" id="composer"><input id="chat-input" placeholder="Message ${esc(h.name)}" maxlength="500" autocomplete="off"><button type="submit">Send</button></form>`}
   </div>`;
   const list = $('#messages');
@@ -579,9 +578,23 @@ async function openChat(match) {
       } catch (err) { toast(err.message); }
     });
   });
-  $('#quick')?.addEventListener('click', (e) => {
+  const quick = $('#quick');
+  quick?.addEventListener('click', (e) => {
     if (e.target.tagName === 'BUTTON') { input.value = e.target.textContent; input.focus(); }
   });
+  let suggestToken = 0;
+  // Pills are real candidate replies to the latest message, refreshed whenever the horse speaks.
+  async function loadSuggestions() {
+    if (!quick) return;
+    const token = ++suggestToken;
+    try {
+      const { suggestions } = await api(`/api/matches/${match.id}/suggestions?as=${state.me.id}`);
+      if (token !== suggestToken || state.chatMatch?.id !== match.id) return;
+      quick.innerHTML = suggestions.map((q) => `<button type="button">${esc(q)}</button>`).join('');
+    } catch {
+      if (token === suggestToken) quick.innerHTML = '';
+    }
+  }
 
   try {
     const msgs = await api(`/api/matches/${match.id}/messages?as=${state.me.id}`);
@@ -589,6 +602,7 @@ async function openChat(match) {
     if (endedNote) list.appendChild(endedNote);
     list.scrollTop = list.scrollHeight;
     refreshMatches();
+    if (!ended) loadSuggestions();
   } catch (err) { toast(err.message); }
 
   let sending = false;
@@ -608,6 +622,8 @@ async function openChat(match) {
     typing.innerHTML = '<i></i><i></i><i></i>';
     list.appendChild(typing);
     list.scrollTop = list.scrollHeight;
+    if (quick) quick.innerHTML = '<span class="quick-hint">Finding the words…</span>';
+    suggestToken += 1;
     const startedAt = Date.now();
     try {
       const { replies } = await api(`/api/matches/${match.id}/messages`, { method: 'POST', body: { fromId: state.me.id, text } });
@@ -619,6 +635,7 @@ async function openChat(match) {
         list.insertAdjacentHTML('beforeend', replies.map(msgHtml).join(''));
         list.scrollTop = list.scrollHeight;
         api(`/api/matches/${match.id}/messages?as=${state.me.id}`).catch(() => {});
+        loadSuggestions();
       }, wait);
     } catch (err) {
       pending.remove();

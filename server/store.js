@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { SEED_HORSES, HORSE_REPLIES, HORSE_FAREWELLS } from './horses.js';
+import { suggestReplies } from './suggest.js';
 
 const VALID_SEX = ['Mare', 'Stallion', 'Gelding'];
 const VALID_GAIT = ['Walk', 'Trot', 'Canter', 'Lope', 'Gallop'];
@@ -125,6 +126,8 @@ export class Store {
     this.now = opts.now || (() => Date.now());
     // Optional async ({ horse, partner, history }) => string|null. Null falls back to canned lines.
     this.replier = opts.replier || null;
+    // Optional async ({ horse, partner, history }) => string[]|null. Null falls back to rules.
+    this.suggester = opts.suggester || null;
     this.state = {
       horses: [],
       swipes: [], // { fromId, toId, direction, at }
@@ -399,6 +402,28 @@ export class Store {
     }
     this.persist();
     return { message: msg, replies };
+  }
+
+  /** Things `readerId` could send next in this match. Empty once the match has ended. */
+  async suggestions(matchId, readerId) {
+    const match = this.getMatch(matchId);
+    if (!match.horseIds.includes(readerId)) throw new ValidationError('Not your match');
+    if (!this.isActive(match)) return { suggestions: [], source: 'none' };
+    const me = this.getHorse(readerId);
+    const other = this.getHorse(match.horseIds.find((x) => x !== readerId));
+    const history = this.state.messages.filter((m) => m.matchId === matchId);
+    let suggestions = null;
+    let source = 'rules';
+    if (this.suggester) {
+      try {
+        suggestions = await this.suggester({ horse: other, partner: me, history });
+        if (suggestions?.length) source = 'ai';
+      } catch {
+        suggestions = null;
+      }
+    }
+    if (!suggestions?.length) suggestions = suggestReplies(other, me, history);
+    return { suggestions, source };
   }
 
   stats(id) {

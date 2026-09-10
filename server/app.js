@@ -73,6 +73,11 @@ function buildRoutes(store) {
       ({ params, query }) => store.messages(params.id, query.get('as') || undefined),
     ],
     [
+      'GET',
+      '/api/matches/:id/suggestions',
+      ({ params, query }) => store.suggestions(params.id, query.get('as') || ''),
+    ],
+    [
       'POST',
       '/api/matches/:id/messages',
       async ({ params, body }) => [201, await store.sendMessage(params.id, String(body.fromId ?? ''), body.text)],
